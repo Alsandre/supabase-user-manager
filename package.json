@@ -1,7 +1,7 @@
 {
-  "name": "@user/user-manager",
-  "version": "0.1.0",
-  "description": "Reusable TypeScript library for Supabase user management",
+  "name": "@alsandre/user-manager",
+  "version": "1.0.0",
+  "description": "Complete TypeScript library for Supabase user management with authentication, sessions, and status system",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,32 +12,56 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test-app": "vite --config test-app/vite.config.ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "npm run build",
+    "clean": "rm -rf dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/[username]/user-manager.git"
+  },
+  "homepage": "https://github.com/[username]/user-manager#readme",
+  "bugs": {
+    "url": "https://github.com/[username]/user-manager/issues"
   },
   "keywords": [
     "supabase",
     "authentication",
     "user-management",
     "typescript",
-    "session-management"
+    "session-management",
+    "user-status",
+    "auth",
+    "database",
+    "real-time",
+    "multi-tab-sync"
   ],
-  "author": "",
+  "author": "Your Name <your.email@example.com>",
   "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "rollup-plugin-visualizer": "^6.0.3",
     "typescript": "^5.3.0",
     "vite": "^5.0.0",
     "vite-plugin-dts": "^3.6.0"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.38.0"
+    "@supabase/supabase-js": "^2.0.0"
   },
   "peerDependencies": {
     "@supabase/supabase-js": "^2.0.0"

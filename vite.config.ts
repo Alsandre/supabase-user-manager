@@ -1,5 +1,6 @@
 import {defineConfig} from "vite";
 import dts from "vite-plugin-dts";
+import {visualizer} from "rollup-plugin-visualizer";
 import {resolve} from "path";
 
 export default defineConfig({
@@ -13,6 +14,12 @@ export default defineConfig({
       insertTypesEntry: true,
       include: ["src/**/*"],
       exclude: ["src/**/*.test.ts", "test-app/**/*"],
+    }),
+    visualizer({
+      filename: "dist/bundle-analysis.html",
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
     }),
   ],
   build: {

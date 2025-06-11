@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          registry-url: "https://registry.npmjs.org"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Build library
+        run: npm run build
+
+      - name: Publish to NPM
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            ## Changes in this Release
+
+            - Complete User Manager Library v${{ github.ref_name }}
+            - Authentication system with email verification
+            - Session management with multi-tab sync
+            - User status progression system
+            - Real Supabase database integration
+            - Comprehensive error handling
+            - TypeScript support with full type definitions
+
+            ## Installation
+
+            ```bash
+            npm install @user/user-manager
+            ```
+
+            ## Documentation
+
+            See the [README](https://github.com/${{ github.repository }}/blob/master/README.md) for usage instructions.
+          draft: false
+          prerelease: false
