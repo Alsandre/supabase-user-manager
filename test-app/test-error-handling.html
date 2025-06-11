@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Error Handling & Validation Tests</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+      }
+
+      .header p {
+        opacity: 0.9;
+        font-size: 1.1rem;
+      }
+
+      .content {
+        padding: 30px;
+      }
+
+      .test-section {
+        margin-bottom: 40px;
+        padding: 25px;
+        border: 2px solid #f0f0f0;
+        border-radius: 15px;
+        background: #fafafa;
+      }
+
+      .test-section h2 {
+        color: #333;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 10px;
+      }
+
+      .test-group {
+        margin-bottom: 25px;
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
+      }
+
+      .test-group h3 {
+        color: #555;
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+      }
+
+      .test-input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 1rem;
+        margin-bottom: 10px;
+        transition: border-color 0.3s;
+      }
+
+      .test-input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .test-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+        margin-right: 10px;
+        margin-bottom: 10px;
+        transition: transform 0.2s;
+      }
+
+      .test-button:hover {
+        transform: translateY(-2px);
+      }
+
+      .test-button:active {
+        transform: translateY(0);
+      }
+
+      .result {
+        margin-top: 15px;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: "Courier New", monospace;
+        font-size: 0.9rem;
+        white-space: pre-wrap;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .result.success {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+      }
+
+      .result.error {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+
+      .result.info {
+        background: #d1ecf1;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #667eea;
+      }
+
+      .stat-label {
+        color: #666;
+        margin-top: 5px;
+      }
+
+      .run-all-button {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin-bottom: 30px;
+        transition: transform 0.2s;
+      }
+
+      .run-all-button:hover {
+        transform: translateY(-2px);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🛡️ Error Handling & Validation Tests</h1>
+        <p>Comprehensive testing suite for UserManager error handling and validation utilities</p>
+      </div>
+
+      <div class="content">
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-number" id="totalTests">0</div>
+            <div class="stat-label">Total Tests</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="passedTests">0</div>
+            <div class="stat-label">Passed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="failedTests">0</div>
+            <div class="stat-label">Failed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="testTime">0ms</div>
+            <div class="stat-label">Execution Time</div>
+          </div>
+        </div>
+
+        <button class="run-all-button" onclick="runAllTests()">🚀 Run All Tests</button>
+
+        <!-- Email Validation Tests -->
+        <div class="test-section">
+          <h2>📧 Email Validation Tests</h2>
+
+          <div class="test-group">
+            <h3>Test Email Validation</h3>
+            <input type="email" class="test-input" id="emailInput" placeholder="Enter email to validate" value="test@example.com" />
+            <button class="test-button" onclick="testEmailValidation()">Validate Email</button>
+            <div id="emailResult" class="result" style="display: none"></div>
+          </div>
+
+          <div class="test-group">
+            <h3>Email Edge Cases</h3>
+            <button class="test-button" onclick="testEmailEdgeCases()">Test Edge Cases</button>
+            <div id="emailEdgeResult" class="result" style="display: none"></div>
+          </div>
+        </div>
+
+        <!-- Password Validation Tests -->
+        <div class="test-section">
+          <h2>🔒 Password Validation Tests</h2>
+
+          <div class="test-group">
+            <h3>Test Password Validation</h3>
+            <input type="password" class="test-input" id="passwordInput" placeholder="Enter password to validate" value="TestPass123!" />
+            <button class="test-button" onclick="testPasswordValidation()">Validate Password</button>
+            <button class="test-button" onclick="testPasswordStrength()">Check Strength</button>
+            <div id="passwordResult" class="result" style="display: none"></div>
+          </div>
+
+          <div class="test-group">
+            <h3>Password Strength Tests</h3>
+            <button class="test-button" onclick="testPasswordStrengthCases()">Test Strength Cases</button>
+            <div id="passwordStrengthResult" class="result" style="display: none"></div>
+          </div>
+        </div>
+
+        <!-- Error Handling Tests -->
+        <div class="test-section">
+          <h2>⚠️ Error Handling Tests</h2>
+
+          <div class="test-group">
+            <h3>UserManagerError Creation</h3>
+            <button class="test-button" onclick="testErrorCreation()">Test Error Creation</button>
+            <div id="errorCreationResult" class="result" style="display: none"></div>
+          </div>
+
+          <div class="test-group">
+            <h3>Error Handler Utilities</h3>
+            <button class="test-button" onclick="testErrorHandler()">Test Error Handler</button>
+            <div id="errorHandlerResult" class="result" style="display: none"></div>
+          </div>
+
+          <div class="test-group">
+            <h3>Operation Wrapper</h3>
+            <button class="test-button" onclick="testOperationWrapper()">Test Operation Wrapper</button>
+            <div id="operationWrapperResult" class="result" style="display: none"></div>
+          </div>
+        </div>
+
+        <!-- Validation Utilities Tests -->
+        <div class="test-section">
+          <h2>✅ Validation Utilities Tests</h2>
+
+          <div class="test-group">
+            <h3>URL Validation</h3>
+            <input type="url" class="test-input" id="urlInput" placeholder="Enter URL to validate" value="https://example.com" />
+            <button class="test-button" onclick="testUrlValidation()">Validate URL</button>
+            <div id="urlResult" class="result" style="display: none"></div>
+          </div>
+
+          <div class="test-group">
+            <h3>Configuration Validation</h3>
+            <button class="test-button" onclick="testConfigValidation()">Test Config Validation</button>
+            <div id="configResult" class="result" style="display: none"></div>
+          </div>
+
+          <div class="test-group">
+            <h3>Metadata Validation</h3>
+            <button class="test-button" onclick="testMetadataValidation()">Test Metadata Validation</button>
+            <div id="metadataResult" class="result" style="display: none"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import {ErrorHandler, UserManagerError, UserManagerErrorType, Validators} from "./dist/index.js";
+
+      // Make utilities available globally for testing
+      window.ErrorHandler = ErrorHandler;
+      window.UserManagerError = UserManagerError;
+      window.UserManagerErrorType = UserManagerErrorType;
+      window.Validators = Validators;
+
+      // Test statistics
+      let testStats = {
+        total: 0,
+        passed: 0,
+        failed: 0,
+        startTime: 0,
+      };
+
+      function updateStats() {
+        document.getElementById("totalTests").textContent = testStats.total;
+        document.getElementById("passedTests").textContent = testStats.passed;
+        document.getElementById("failedTests").textContent = testStats.failed;
+
+        // Fix execution time calculation - only show if tests are running
+        const executionTime = testStats.startTime > 0 ? Date.now() - testStats.startTime : 0;
+        document.getElementById("testTime").textContent = `${executionTime}ms`;
+      }
+
+      function showCompletionMessage(successRate) {
+        // Create a beautiful completion banner
+        const banner = document.createElement("div");
+        banner.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+          color: white;
+          padding: 20px 30px;
+          border-radius: 15px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          z-index: 1000;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-weight: bold;
+          transform: translateX(400px);
+          transition: transform 0.5s ease;
+        `;
+
+        banner.innerHTML = `
+          <div style="font-size: 1.2rem; margin-bottom: 10px;">🎉 Tests Completed!</div>
+          <div style="font-size: 0.9rem; opacity: 0.9;">
+            Success Rate: ${successRate}% • ${testStats.passed}/${testStats.total} passed
+          </div>
+        `;
+
+        document.body.appendChild(banner);
+
+        // Animate in
+        setTimeout(() => {
+          banner.style.transform = "translateX(0)";
+        }, 100);
+
+        // Auto-remove after 4 seconds
+        setTimeout(() => {
+          banner.style.transform = "translateX(400px)";
+          setTimeout(() => {
+            if (banner.parentNode) {
+              banner.parentNode.removeChild(banner);
+            }
+          }, 500);
+        }, 4000);
+      }
+
+      function showResult(elementId, content, type = "info") {
+        const element = document.getElementById(elementId);
+        element.textContent = content;
+        element.className = `result ${type}`;
+        element.style.display = "block";
+      }
+
+      function runTest(testName, testFn) {
+        testStats.total++;
+        try {
+          const result = testFn();
+          testStats.passed++;
+          return {success: true, result};
+        } catch (error) {
+          testStats.failed++;
+          return {success: false, error: error.message};
+        }
+      }
+
+      // Email validation tests
+      window.testEmailValidation = function () {
+        const email = document.getElementById("emailInput").value;
+        const result = Validators.validateEmail(email);
+
+        const output = `Email: ${email}
+Valid: ${result.isValid}
+Errors: ${result.errors.join(", ") || "None"}
+Sanitized: ${Validators.sanitizeEmail(email)}`;
+
+        showResult("emailResult", output, result.isValid ? "success" : "error");
+      };
+
+      window.testEmailEdgeCases = function () {
+        const testCases = ["", "invalid", "test@", "@example.com", "test..test@example.com", ".test@example.com", "test@example.com.", "valid@example.com", "user+tag@example.co.uk", "a".repeat(255) + "@example.com"];
+
+        let output = "Email Edge Case Tests:\n\n";
+        testCases.forEach((email) => {
+          const result = Validators.validateEmail(email);
+          output += `"${email}" -> ${result.isValid ? "VALID" : "INVALID"}`;
+          if (!result.isValid) {
+            output += ` (${result.errors.join(", ")})`;
+          }
+          output += "\n";
+        });
+
+        showResult("emailEdgeResult", output, "info");
+      };
+
+      // Password validation tests
+      window.testPasswordValidation = function () {
+        const password = document.getElementById("passwordInput").value;
+        const result = Validators.validatePassword(password);
+
+        const output = `Password: ${"*".repeat(password.length)}
+Valid: ${result.isValid}
+Errors: ${result.errors.join(", ") || "None"}`;
+
+        showResult("passwordResult", output, result.isValid ? "success" : "error");
+      };
+
+      window.testPasswordStrength = function () {
+        const password = document.getElementById("passwordInput").value;
+        const strength = Validators.getPasswordStrength(password);
+
+        const output = `Password Strength Analysis:
+Score: ${strength.score}/4
+Feedback: ${strength.feedback.join(", ")}`;
+
+        showResult("passwordResult", output, "info");
+      };
+
+      window.testPasswordStrengthCases = function () {
+        const testCases = ["", "weak", "password123", "StrongPass1", "VeryStr0ng!Pass", "SuperSecure123!@#$%"];
+
+        let output = "Password Strength Test Cases:\n\n";
+        testCases.forEach((password) => {
+          const strength = Validators.getPasswordStrength(password);
+          output += `"${"*".repeat(password.length)}" -> Score: ${strength.score}/4\n`;
+          output += `  Feedback: ${strength.feedback.join(", ")}\n\n`;
+        });
+
+        showResult("passwordStrengthResult", output, "info");
+      };
+
+      // Error handling tests
+      window.testErrorCreation = function () {
+        const error = new UserManagerError(UserManagerErrorType.AUTH_ERROR, "Test authentication error", {
+          code: "401",
+          details: {operation: "signIn"},
+          originalError: new Error("Original error"),
+        });
+
+        const output = `UserManagerError Created:
+Type: ${error.type}
+Message: ${error.message}
+Code: ${error.code}
+User Message: ${error.getUserMessage()}
+Timestamp: ${error.timestamp.toISOString()}
+Details: ${JSON.stringify(error.details, null, 2)}
+JSON: ${JSON.stringify(error.toJSON(), null, 2)}`;
+
+        showResult("errorCreationResult", output, "success");
+      };
+
+      window.testErrorHandler = function () {
+        // Configure error handler
+        ErrorHandler.configure({enableLogging: true, logPrefix: "[TEST]"});
+
+        // Test different error creation methods
+        const authError = ErrorHandler.handleAuthError(
+          {
+            message: "Invalid login credentials",
+            status: 401,
+          },
+          "signIn"
+        );
+
+        const networkError = ErrorHandler.handleNetworkError(new Error("Network timeout"), "fetchUser");
+
+        const validationError = ErrorHandler.handleValidationError("email", "Invalid format");
+
+        const output = `Error Handler Tests:
+
+Auth Error:
+  Type: ${authError.type}
+  Message: ${authError.message}
+  User Message: ${authError.getUserMessage()}
+
+Network Error:
+  Type: ${networkError.type}
+  Message: ${networkError.message}
+
+Validation Error:
+  Type: ${validationError.type}
+  Message: ${validationError.message}
+
+Error Type Check: ${ErrorHandler.isErrorType(authError, UserManagerErrorType.AUTH_ERROR)}`;
+
+        showResult("errorHandlerResult", output, "success");
+      };
+
+      window.testOperationWrapper = function () {
+        async function runOperationTests() {
+          // Test successful operation
+          const successResult = await ErrorHandler.wrapOperation(async () => ({data: "success"}), UserManagerErrorType.OPERATION_FAILED, "testOperation");
+
+          // Test failed operation
+          const failResult = await ErrorHandler.wrapOperation(
+            async () => {
+              throw new Error("Test error");
+            },
+            UserManagerErrorType.OPERATION_FAILED,
+            "testOperation"
+          );
+
+          const output = `Operation Wrapper Tests:
+
+Success Result:
+  Success: ${successResult.success}
+  Data: ${JSON.stringify(successResult.data)}
+
+Fail Result:
+  Success: ${failResult.success}
+  Error Type: ${failResult.error?.type}
+  Error Message: ${failResult.error?.message}`;
+
+          showResult("operationWrapperResult", output, "success");
+        }
+
+        runOperationTests();
+      };
+
+      // Validation utilities tests
+      window.testUrlValidation = function () {
+        const url = document.getElementById("urlInput").value;
+        const result = Validators.validateUrl(url);
+
+        const testUrls = ["https://example.com", "http://localhost:3000", "ftp://example.com", "invalid-url", ""];
+
+        let output = `URL Validation for: ${url}
+Valid: ${result.isValid}
+Errors: ${result.errors.join(", ") || "None"}
+
+Additional URL Tests:
+`;
+
+        testUrls.forEach((testUrl) => {
+          const testResult = Validators.validateUrl(testUrl);
+          output += `"${testUrl}" -> ${testResult.isValid ? "VALID" : "INVALID"}`;
+          if (!testResult.isValid) {
+            output += ` (${testResult.errors.join(", ")})`;
+          }
+          output += "\n";
+        });
+
+        showResult("urlResult", output, result.isValid ? "success" : "error");
+      };
+
+      window.testConfigValidation = function () {
+        const validConfig = {
+          supabaseUrl: "https://example.supabase.co",
+          supabaseAnonKey: "test-key",
+          events: {enableLogging: true},
+          auth: {redirectTo: "https://app.example.com"},
+        };
+
+        const invalidConfigs = [
+          null,
+          {},
+          {supabaseUrl: "invalid-url"},
+          {supabaseUrl: "https://example.com"}, // missing key
+          {supabaseUrl: "https://example.com", supabaseAnonKey: 123},
+        ];
+
+        let output = "Configuration Validation Tests:\n\n";
+
+        const validResult = Validators.validateConfig(validConfig);
+        output += `Valid Config: ${validResult.isValid}\n`;
+        if (!validResult.isValid) {
+          output += `Errors: ${validResult.errors.join(", ")}\n`;
+        }
+        output += "\n";
+
+        invalidConfigs.forEach((config, index) => {
+          const result = Validators.validateConfig(config);
+          output += `Invalid Config ${index + 1}: ${result.isValid ? "VALID" : "INVALID"}\n`;
+          if (!result.isValid) {
+            output += `  Errors: ${result.errors.join(", ")}\n`;
+          }
+          output += "\n";
+        });
+
+        showResult("configResult", output, "info");
+      };
+
+      window.testMetadataValidation = function () {
+        const testCases = [{name: "John", age: 30}, {id: "reserved-key"}, {circular: null}, null, "not-an-object"];
+
+        // Create circular reference
+        testCases[2].circular = testCases[2];
+
+        let output = "Metadata Validation Tests:\n\n";
+
+        testCases.forEach((metadata, index) => {
+          try {
+            const result = Validators.validateUserMetadata(metadata);
+            output += `Test Case ${index + 1}: ${result.isValid ? "VALID" : "INVALID"}\n`;
+            if (!result.isValid) {
+              output += `  Errors: ${result.errors.join(", ")}\n`;
+            }
+          } catch (error) {
+            output += `Test Case ${index + 1}: ERROR - ${error.message}\n`;
+          }
+          output += "\n";
+        });
+
+        showResult("metadataResult", output, "info");
+      };
+
+      // Run all tests
+      window.runAllTests = function () {
+        // Reset stats and start timing
+        testStats = {total: 0, passed: 0, failed: 0, startTime: Date.now()};
+
+        // Update button state
+        const runButton = document.querySelector(".run-all-button");
+        const originalText = runButton.textContent;
+        runButton.textContent = "⏳ Running Tests...";
+        runButton.disabled = true;
+        runButton.style.opacity = "0.7";
+
+        console.log("🚀 Starting comprehensive test suite...");
+
+        // Run all test functions with proper tracking
+        runTest("Email Edge Cases", () => {
+          testEmailEdgeCases();
+          return "Email validation tests completed";
+        });
+
+        runTest("Password Strength Cases", () => {
+          testPasswordStrengthCases();
+          return "Password strength tests completed";
+        });
+
+        runTest("Error Creation", () => {
+          testErrorCreation();
+          return "Error creation tests completed";
+        });
+
+        runTest("Error Handler", () => {
+          testErrorHandler();
+          return "Error handler tests completed";
+        });
+
+        runTest("Operation Wrapper", () => {
+          testOperationWrapper();
+          return "Operation wrapper tests completed";
+        });
+
+        runTest("Config Validation", () => {
+          testConfigValidation();
+          return "Configuration validation tests completed";
+        });
+
+        runTest("Metadata Validation", () => {
+          testMetadataValidation();
+          return "Metadata validation tests completed";
+        });
+
+        // Additional comprehensive tests
+        runTest("Email Validation Comprehensive", () => {
+          const testEmails = ["valid@example.com", "invalid-email", "", "test@", "@example.com", "user+tag@example.co.uk", "test..test@example.com", ".test@example.com", "test@example.com."];
+
+          let passed = 0;
+          testEmails.forEach((email) => {
+            const result = Validators.validateEmail(email);
+            if (email === "valid@example.com" || email === "user+tag@example.co.uk") {
+              if (result.isValid) passed++;
+            } else {
+              if (!result.isValid) passed++;
+            }
+          });
+
+          if (passed !== testEmails.length) {
+            throw new Error(`Email validation failed: ${passed}/${testEmails.length} tests passed`);
+          }
+
+          return `All ${testEmails.length} email validation tests passed`;
+        });
+
+        runTest("Password Validation Comprehensive", () => {
+          const testPasswords = [
+            {password: "weak", shouldBeValid: false},
+            {password: "StrongPass1", shouldBeValid: true},
+            {password: "VeryStr0ng!Pass", shouldBeValid: true},
+            {password: "password123", shouldBeValid: false},
+            {password: "", shouldBeValid: false},
+          ];
+
+          let passed = 0;
+          testPasswords.forEach((test) => {
+            const result = Validators.validatePassword(test.password);
+            if (result.isValid === test.shouldBeValid) passed++;
+          });
+
+          if (passed !== testPasswords.length) {
+            throw new Error(`Password validation failed: ${passed}/${testPasswords.length} tests passed`);
+          }
+
+          return `All ${testPasswords.length} password validation tests passed`;
+        });
+
+        runTest("URL Validation Comprehensive", () => {
+          const testUrls = [
+            {url: "https://example.com", shouldBeValid: true},
+            {url: "http://localhost:3000", shouldBeValid: true},
+            {url: "ftp://example.com", shouldBeValid: false},
+            {url: "invalid-url", shouldBeValid: false},
+            {url: "", shouldBeValid: false},
+          ];
+
+          let passed = 0;
+          testUrls.forEach((test) => {
+            const result = Validators.validateUrl(test.url);
+            if (result.isValid === test.shouldBeValid) passed++;
+          });
+
+          if (passed !== testUrls.length) {
+            throw new Error(`URL validation failed: ${passed}/${testUrls.length} tests passed`);
+          }
+
+          return `All ${testUrls.length} URL validation tests passed`;
+        });
+
+        // Performance test
+        runTest("Performance Test", () => {
+          const startTime = Date.now();
+          for (let i = 0; i < 1000; i++) {
+            Validators.validateEmail("test@example.com");
+            Validators.validatePassword("TestPass123!");
+            Validators.getPasswordStrength("TestPass123!");
+          }
+          const endTime = Date.now();
+          const duration = endTime - startTime;
+
+          if (duration > 100) {
+            // Should complete in under 100ms
+            throw new Error(`Performance test failed: took ${duration}ms (expected < 100ms)`);
+          }
+
+          return `Performance test passed: 3000 operations in ${duration}ms`;
+        });
+
+        setTimeout(() => {
+          updateStats();
+          const successRate = testStats.total > 0 ? Math.round((testStats.passed / testStats.total) * 100) : 0;
+          console.log(`✅ Test suite completed! Success rate: ${successRate}%`);
+
+          // Restore button state
+          const runButton = document.querySelector(".run-all-button");
+          runButton.textContent = "🚀 Run All Tests";
+          runButton.disabled = false;
+          runButton.style.opacity = "1";
+
+          // Show completion message in the UI instead of alert
+          showCompletionMessage(successRate);
+        }, 100);
+      };
+
+      // Initialize stats properly to prevent huge numbers on page load
+      testStats = {total: 0, passed: 0, failed: 0, startTime: 0};
+      updateStats();
+      console.log("Error Handling & Validation Test Suite Loaded");
+      console.log("Available utilities:", {ErrorHandler, UserManagerError, UserManagerErrorType, Validators});
+    </script>
+  </body>
+</html>
