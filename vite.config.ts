@@ -6,6 +6,7 @@ export default defineConfig({
   // Development server configuration
   root: "test-app",
   publicDir: "../public",
+  envDir: "../", // Look for .env files in the parent directory
 
   plugins: [
     dts({

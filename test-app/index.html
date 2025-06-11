@@ -189,7 +189,21 @@
       </form>
     </div>
 
-    <script>
+    <script type="module">
+      // Import configuration
+      import config from "./config.js";
+
+      // Validate configuration on page load
+      window.addEventListener("load", () => {
+        const isValid = config.validate();
+        if (!isValid) {
+          document.getElementById("error").textContent = "Configuration error: Please check your .env file";
+          document.getElementById("error").style.display = "block";
+        } else {
+          console.log("✅ Supabase configuration loaded successfully");
+        }
+      });
+
       // Simple form switching
       function showLogin() {
         document.getElementById("loginForm").style.display = "block";
@@ -223,6 +237,11 @@
 
       // Placeholder for UserManager integration
       console.log("Test app loaded - ready for UserManager integration");
+
+      // Make functions global for onclick handlers
+      window.showLogin = showLogin;
+      window.showSignUp = showSignUp;
+      window.showResetPassword = showResetPassword;
     </script>
   </body>
 </html>
