@@ -17,9 +17,12 @@ export type UserManagerEvents = {
   "auth:signedIn": {user: SupabaseUser; session: UserSession};
   "auth:signedOut": {user: SupabaseUser | null};
   "auth:signUp": {user: SupabaseUser; needsVerification: boolean};
+  "auth:signUpComplete": {user: SupabaseUser; needsVerification: boolean};
   "auth:passwordReset": {email: string};
+  "auth:passwordResetSent": {email: string};
   "auth:passwordUpdated": {user: SupabaseUser};
   "auth:emailVerified": {user: SupabaseUser};
+  "auth:verificationResent": {email: string};
   "auth:sessionRefreshed": {session: UserSession};
   "auth:error": {operation: string; error: AuthError};
 

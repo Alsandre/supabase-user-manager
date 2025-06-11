@@ -1,10 +1,12 @@
 import type {UserManagerConfig} from "../types/Config";
 import type {SupabaseUser, UserSession, UserStatus, UserStatusType} from "../types/User";
 import type {UserManagerEvents, UserManagerEventName, EventData} from "../types/Events";
+import type {SignUpCredentials, SignInCredentials, PasswordResetRequest} from "../types/Auth";
 import {EventEmitter} from "./EventEmitter";
 import {createClient, type SupabaseClient} from "@supabase/supabase-js";
 import {ErrorHandler, UserManagerError, UserManagerErrorType, type OperationResult} from "../utils/ErrorHandler";
 import {Validators} from "../utils/Validators";
+import {EmailAuthService} from "../services/EmailAuthService";
 
 /**
  * Main UserManager class - Singleton pattern
@@ -15,6 +17,7 @@ export class UserManager {
   private config: UserManagerConfig;
   private eventEmitter: EventEmitter;
   private supabase: SupabaseClient;
+  private emailAuthService: EmailAuthService;
   private isInitialized: boolean = false;
   private currentUser: SupabaseUser | null = null;
   private currentSession: UserSession | null = null;
@@ -49,6 +52,11 @@ export class UserManager {
           persistSession: true,
           detectSessionInUrl: true,
         },
+      });
+
+      // Initialize EmailAuthService
+      this.emailAuthService = new EmailAuthService(this.supabase, {
+        enableLogging: config.events?.enableLogging || false,
       });
     } catch (error) {
       throw ErrorHandler.createError(UserManagerErrorType.INITIALIZATION_ERROR, "Failed to initialize Supabase client", {
@@ -191,6 +199,203 @@ export class UserManager {
       status: this.currentStatus,
       isAuthenticated: !!this.currentUser,
     });
+  }
+
+  // Authentication Methods
+  /**
+   * Sign up a new user with email and password
+   */
+  async signUp(credentials: SignUpCredentials): Promise<OperationResult<{user: SupabaseUser | null; session: UserSession | null}>> {
+    this.validateReady();
+
+    return await ErrorHandler.wrapOperation(
+      async () => {
+        this.emit("user:loading", {isLoading: true});
+
+        const result = await this.emailAuthService.signUp(credentials);
+
+        if (result.success && result.data) {
+          // Update internal state
+          if (result.data.session) {
+            this.currentSession = result.data.session;
+            this.currentUser = result.data.user;
+            this.emit("auth:signedIn", {user: result.data.user, session: result.data.session});
+            this.emit("session:started", {session: result.data.session});
+          } else if (result.data.user) {
+            // User created but needs email verification
+            this.emit("auth:signUpComplete", {user: result.data.user, needsVerification: true});
+          }
+
+          this.emit("user:loading", {isLoading: false});
+          return result.data;
+        }
+
+        throw result.error || ErrorHandler.createError(UserManagerErrorType.AUTH_ERROR, "Sign up failed");
+      },
+      UserManagerErrorType.AUTH_ERROR,
+      "signUp"
+    );
+  }
+
+  /**
+   * Sign in an existing user with email and password
+   */
+  async signIn(credentials: SignInCredentials): Promise<OperationResult<{user: SupabaseUser; session: UserSession}>> {
+    this.validateReady();
+
+    return await ErrorHandler.wrapOperation(
+      async () => {
+        this.emit("user:loading", {isLoading: true});
+
+        const result = await this.emailAuthService.signIn(credentials);
+
+        if (result.success && result.data) {
+          // Update internal state
+          this.currentSession = result.data.session;
+          this.currentUser = result.data.user;
+
+          this.emit("auth:signedIn", {user: result.data.user, session: result.data.session});
+          this.emit("session:started", {session: result.data.session});
+          this.emit("user:loading", {isLoading: false});
+
+          return result.data;
+        }
+
+        this.emit("user:loading", {isLoading: false});
+        throw result.error || ErrorHandler.createError(UserManagerErrorType.AUTH_ERROR, "Sign in failed");
+      },
+      UserManagerErrorType.AUTH_ERROR,
+      "signIn"
+    );
+  }
+
+  /**
+   * Sign out the current user
+   */
+  async signOut(): Promise<OperationResult<void>> {
+    this.validateReady();
+
+    return await ErrorHandler.wrapOperation(
+      async () => {
+        const previousUser = this.currentUser;
+
+        const result = await this.emailAuthService.signOut();
+
+        if (result.success) {
+          // Clear internal state
+          this.currentSession = null;
+          this.currentUser = null;
+          this.currentStatus = null;
+
+          this.emit("auth:signedOut", {user: previousUser});
+          this.emit("session:ended", {reason: "logout"});
+
+          return;
+        }
+
+        throw result.error || ErrorHandler.createError(UserManagerErrorType.AUTH_ERROR, "Sign out failed");
+      },
+      UserManagerErrorType.AUTH_ERROR,
+      "signOut"
+    );
+  }
+
+  /**
+   * Send password reset email
+   */
+  async resetPassword(request: PasswordResetRequest): Promise<OperationResult<void>> {
+    this.validateReady();
+
+    return await ErrorHandler.wrapOperation(
+      async () => {
+        const result = await this.emailAuthService.resetPassword(request);
+
+        if (result.success) {
+          this.emit("auth:passwordResetSent", {email: request.email});
+          return;
+        }
+
+        throw result.error || ErrorHandler.createError(UserManagerErrorType.AUTH_ERROR, "Password reset failed");
+      },
+      UserManagerErrorType.AUTH_ERROR,
+      "resetPassword"
+    );
+  }
+
+  /**
+   * Update user password (requires active session)
+   */
+  async updatePassword(newPassword: string): Promise<OperationResult<SupabaseUser>> {
+    this.validateReady();
+
+    if (!this.isAuthenticated()) {
+      throw ErrorHandler.createError(UserManagerErrorType.AUTH_ERROR, "User must be authenticated to update password");
+    }
+
+    return await ErrorHandler.wrapOperation(
+      async () => {
+        const result = await this.emailAuthService.updatePassword(newPassword);
+
+        if (result.success && result.data) {
+          this.currentUser = result.data;
+          this.emit("auth:passwordUpdated", {user: result.data});
+          return result.data;
+        }
+
+        throw result.error || ErrorHandler.createError(UserManagerErrorType.AUTH_ERROR, "Password update failed");
+      },
+      UserManagerErrorType.AUTH_ERROR,
+      "updatePassword"
+    );
+  }
+
+  /**
+   * Resend email verification
+   */
+  async resendVerification(email: string): Promise<OperationResult<void>> {
+    this.validateReady();
+
+    return await ErrorHandler.wrapOperation(
+      async () => {
+        const result = await this.emailAuthService.resendVerification(email);
+
+        if (result.success) {
+          this.emit("auth:verificationResent", {email});
+          return;
+        }
+
+        throw result.error || ErrorHandler.createError(UserManagerErrorType.VERIFICATION_ERROR, "Failed to resend verification email");
+      },
+      UserManagerErrorType.VERIFICATION_ERROR,
+      "resendVerification"
+    );
+  }
+
+  /**
+   * Refresh the current session
+   */
+  async refreshSession(): Promise<OperationResult<{user: SupabaseUser; session: UserSession}>> {
+    this.validateReady();
+
+    return await ErrorHandler.wrapOperation(
+      async () => {
+        const result = await this.emailAuthService.refreshSession();
+
+        if (result.success && result.data) {
+          this.currentSession = result.data.session;
+          this.currentUser = result.data.user;
+
+          this.emit("auth:sessionRefreshed", {session: result.data.session});
+          this.emit("session:refreshed", {session: result.data.session});
+
+          return result.data;
+        }
+
+        throw result.error || ErrorHandler.createError(UserManagerErrorType.SESSION_ERROR, "Session refresh failed");
+      },
+      UserManagerErrorType.SESSION_ERROR,
+      "refreshSession"
+    );
   }
 
   // Event System Methods
