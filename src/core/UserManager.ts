@@ -1,6 +1,10 @@
-import type {UserManagerConfig, SupabaseUser, UserSession, UserStatus, UserManagerEvents, UserManagerEventName, EventData} from "@/types";
+import type {UserManagerConfig} from "../types/Config";
+import type {SupabaseUser, UserSession, UserStatus, UserStatusType} from "../types/User";
+import type {UserManagerEvents, UserManagerEventName, EventData} from "../types/Events";
 import {EventEmitter} from "./EventEmitter";
 import {createClient, type SupabaseClient} from "@supabase/supabase-js";
+import {ErrorHandler, UserManagerError, UserManagerErrorType, type OperationResult} from "../utils/ErrorHandler";
+import {Validators} from "../utils/Validators";
 
 /**
  * Main UserManager class - Singleton pattern
@@ -17,21 +21,44 @@ export class UserManager {
   private currentStatus: UserStatus | null = null;
 
   private constructor(config: UserManagerConfig) {
+    // Validate configuration before proceeding
+    const configValidation = Validators.validateConfig(config);
+    if (!configValidation.isValid) {
+      throw ErrorHandler.createError(UserManagerErrorType.CONFIGURATION_ERROR, `Invalid UserManager configuration: ${configValidation.errors.join(", ")}`, {details: {errors: configValidation.errors}});
+    }
+
     this.config = config;
+
+    // Configure error handler
+    ErrorHandler.configure({
+      enableLogging: config.events?.enableLogging || false,
+      logPrefix: "[UserManager]",
+    });
+
     this.eventEmitter = new EventEmitter({
       maxListeners: config.events?.maxListeners || 50,
       enableLogging: config.events?.enableLogging || false,
       logPrefix: "[UserManager]",
     });
 
-    // Initialize Supabase client
-    this.supabase = createClient(config.supabase.url, config.supabase.anonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-      },
-    });
+    // Initialize Supabase client with error handling
+    try {
+      this.supabase = createClient(config.supabase.url, config.supabase.anonKey, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true,
+        },
+      });
+    } catch (error) {
+      throw ErrorHandler.createError(UserManagerErrorType.INITIALIZATION_ERROR, "Failed to initialize Supabase client", {
+        originalError: error as Error,
+        details: {
+          supabaseUrl: config.supabase.url,
+          hasAnonKey: !!config.supabase.anonKey,
+        },
+      });
+    }
   }
 
   /**
@@ -64,46 +91,55 @@ export class UserManager {
   /**
    * Initialize the UserManager and set up auth state listener
    */
-  async initialize(): Promise<void> {
+  async initialize(): Promise<OperationResult<void>> {
     if (this.isInitialized) {
-      console.warn("[UserManager] Already initialized");
-      return;
-    }
-
-    try {
-      // Set up auth state change listener
-      this.supabase.auth.onAuthStateChange((event, session) => {
-        this.handleAuthStateChange(event, session);
-      });
-
-      // Get initial session
-      const {
-        data: {session},
-        error,
-      } = await this.supabase.auth.getSession();
-      if (error) {
-        console.error("[UserManager] Error getting initial session:", error);
-        this.emit("error:general", {message: "Failed to get initial session", error});
-      } else if (session) {
-        this.currentSession = session;
-        this.currentUser = session.user;
-        this.emit("session:started", {session});
-      }
-
-      this.isInitialized = true;
-      this.emit("user:loading", {isLoading: false});
-
       if (this.config.events?.enableLogging) {
-        console.log("[UserManager] Initialized successfully", {
-          hasSession: !!session,
-          user: session?.user?.email,
-        });
+        console.warn("[UserManager] Already initialized");
       }
-    } catch (error) {
-      console.error("[UserManager] Initialization failed:", error);
-      this.emit("error:general", {message: "UserManager initialization failed", error: error as Error});
-      throw error;
+      return {success: true};
     }
+
+    return await ErrorHandler.wrapOperation(
+      async () => {
+        // Set up auth state change listener
+        this.supabase.auth.onAuthStateChange((event, session) => {
+          this.handleAuthStateChange(event, session);
+        });
+
+        // Get initial session
+        const {
+          data: {session},
+          error,
+        } = await this.supabase.auth.getSession();
+
+        if (error) {
+          const userManagerError = ErrorHandler.handleAuthError(error, "getInitialSession");
+          this.emit("error:general", {
+            message: userManagerError.getUserMessage(),
+            error: userManagerError,
+          });
+          throw userManagerError;
+        }
+
+        if (session) {
+          this.currentSession = session;
+          this.currentUser = session.user;
+          this.emit("session:started", {session});
+        }
+
+        this.isInitialized = true;
+        this.emit("user:loading", {isLoading: false});
+
+        if (this.config.events?.enableLogging) {
+          console.log("[UserManager] Initialized successfully", {
+            hasSession: !!session,
+            user: session?.user?.email,
+          });
+        }
+      },
+      UserManagerErrorType.INITIALIZATION_ERROR,
+      "initialize"
+    );
   }
 
   /**
@@ -179,13 +215,6 @@ export class UserManager {
     this.eventEmitter.once(event, listener);
   }
 
-  /**
-   * Emit event (internal use)
-   */
-  private emit<T extends UserManagerEventName>(event: T, data: EventData<T>): void {
-    this.eventEmitter.emit(event, data);
-  }
-
   // Getters
   /**
    * Get current user
@@ -227,6 +256,130 @@ export class UserManager {
    */
   getSupabaseClient(): SupabaseClient {
     return this.supabase;
+  }
+
+  /**
+   * Validate and update configuration
+   */
+  updateConfig(newConfig: Partial<UserManagerConfig>): OperationResult<UserManagerConfig> {
+    try {
+      const mergedConfig = {...this.config, ...newConfig};
+      const validation = Validators.validateConfig(mergedConfig);
+
+      if (!validation.isValid) {
+        throw ErrorHandler.createError(UserManagerErrorType.CONFIGURATION_ERROR, `Invalid configuration update: ${validation.errors.join(", ")}`, {details: {errors: validation.errors}});
+      }
+
+      this.config = mergedConfig;
+
+      // Reconfigure error handler if logging settings changed
+      if (newConfig.events?.enableLogging !== undefined) {
+        ErrorHandler.configure({
+          enableLogging: this.config.events?.enableLogging || false,
+          logPrefix: "[UserManager]",
+        });
+      }
+
+      if (this.config.events?.enableLogging) {
+        console.log("[UserManager] Configuration updated successfully");
+      }
+
+      return {success: true, data: this.config};
+    } catch (error) {
+      if (error instanceof UserManagerError) {
+        return {success: false, error};
+      }
+
+      const userManagerError = ErrorHandler.createError(UserManagerErrorType.CONFIGURATION_ERROR, "Failed to update configuration", {originalError: error as Error});
+
+      return {success: false, error: userManagerError};
+    }
+  }
+
+  /**
+   * Get comprehensive user state with error handling
+   */
+  getUserState(): OperationResult<{
+    user: SupabaseUser | null;
+    session: UserSession | null;
+    status: UserStatus | null;
+    isAuthenticated: boolean;
+    isReady: boolean;
+  }> {
+    try {
+      const state = {
+        user: this.currentUser,
+        session: this.currentSession,
+        status: this.currentStatus,
+        isAuthenticated: this.isAuthenticated(),
+        isReady: this.isReady(),
+      };
+
+      return {success: true, data: state};
+    } catch (error) {
+      const userManagerError = ErrorHandler.createError(UserManagerErrorType.OPERATION_FAILED, "Failed to get user state", {originalError: error as Error});
+
+      return {success: false, error: userManagerError};
+    }
+  }
+
+  /**
+   * Safely emit events with error handling
+   */
+  private safeEmit<T extends UserManagerEventName>(event: T, data: EventData<T>): void {
+    try {
+      this.eventEmitter.emit(event, data);
+    } catch (error) {
+      const userManagerError = ErrorHandler.createError(UserManagerErrorType.OPERATION_FAILED, `Failed to emit event: ${event}`, {
+        originalError: error as Error,
+        details: {event, dataKeys: Object.keys(data || {})},
+      });
+
+      ErrorHandler.logError(userManagerError, "safeEmit");
+
+      // Emit error event if it's not already an error event to avoid infinite loops
+      if (!event.startsWith("error:")) {
+        try {
+          this.eventEmitter.emit("error:general", {
+            message: userManagerError.getUserMessage(),
+            error: userManagerError,
+          });
+        } catch {
+          // If even error emission fails, just log to console
+          console.error("[UserManager] Critical error: Failed to emit error event", userManagerError.toJSON());
+        }
+      }
+    }
+  }
+
+  /**
+   * Enhanced emit method that replaces the private emit
+   */
+  private emit<T extends UserManagerEventName>(event: T, data: EventData<T>): void {
+    this.safeEmit(event, data);
+  }
+
+  /**
+   * Validate UserManager is ready for operations
+   */
+  private validateReady(): void {
+    if (!this.isInitialized) {
+      throw ErrorHandler.createError(UserManagerErrorType.INITIALIZATION_ERROR, "UserManager must be initialized before performing operations", {details: {isInitialized: this.isInitialized}});
+    }
+  }
+
+  /**
+   * Get error handler instance for external use
+   */
+  getErrorHandler(): typeof ErrorHandler {
+    return ErrorHandler;
+  }
+
+  /**
+   * Get validators instance for external use
+   */
+  getValidators(): typeof Validators {
+    return Validators;
   }
 
   /**

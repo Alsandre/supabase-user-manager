@@ -324,18 +324,29 @@ export class Validators {
       return {isValid: false, errors};
     }
 
-    // Check required fields
-    if (!config.supabaseUrl || typeof config.supabaseUrl !== "string") {
-      errors.push("supabaseUrl is required and must be a string");
+    // Check required supabase configuration
+    if (!config.supabase || typeof config.supabase !== "object") {
+      errors.push("supabase configuration is required and must be an object");
+      return {isValid: false, errors};
+    }
+
+    // Check required supabase fields
+    if (!config.supabase.url || typeof config.supabase.url !== "string") {
+      errors.push("supabase.url is required and must be a string");
     } else {
-      const urlResult = this.validateUrl(config.supabaseUrl);
+      const urlResult = this.validateUrl(config.supabase.url);
       if (!urlResult.isValid) {
-        errors.push("supabaseUrl must be a valid URL");
+        errors.push("supabase.url must be a valid URL");
       }
     }
 
-    if (!config.supabaseAnonKey || typeof config.supabaseAnonKey !== "string") {
-      errors.push("supabaseAnonKey is required and must be a string");
+    if (!config.supabase.anonKey || typeof config.supabase.anonKey !== "string") {
+      errors.push("supabase.anonKey is required and must be a string");
+    }
+
+    // Validate optional supabase options
+    if (config.supabase.options && typeof config.supabase.options !== "object") {
+      errors.push("supabase.options must be an object");
     }
 
     // Validate optional fields
@@ -343,8 +354,12 @@ export class Validators {
       errors.push("events configuration must be an object");
     }
 
-    if (config.auth && typeof config.auth !== "object") {
-      errors.push("auth configuration must be an object");
+    if (config.session && typeof config.session !== "object") {
+      errors.push("session configuration must be an object");
+    }
+
+    if (config.status && typeof config.status !== "object") {
+      errors.push("status configuration must be an object");
     }
 
     return {isValid: errors.length === 0, errors};
