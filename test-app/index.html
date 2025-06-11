@@ -190,26 +190,242 @@
     </div>
 
     <script type="module">
-      // Import configuration and navigation
+      // Import configuration, navigation, and UserManager
       import config from "./config.js";
       import {initializeNavigation} from "./navigation.js";
+      import {UserManager} from "../src/index.ts";
 
-      // Initialize navigation and validate configuration on page load
-      window.addEventListener("load", () => {
+      let userManager = null;
+
+      // Initialize navigation and UserManager on page load
+      window.addEventListener("load", async () => {
         // Initialize navigation
         initializeNavigation("index.html");
 
         // Validate configuration
         const isValid = config.validate();
         if (!isValid) {
-          document.getElementById("error").textContent = "Configuration error: Please check your .env file";
-          document.getElementById("error").style.display = "block";
-        } else {
-          console.log("✅ Supabase configuration loaded successfully");
+          showError("Configuration error: Please check your .env file");
+          return;
+        }
+
+        console.log("config", config);
+        // Initialize UserManager
+        try {
+          userManager = UserManager.init({
+            supabase: {
+              url: config.supabase.url,
+              anonKey: config.supabase.anonKey,
+            },
+            events: {
+              enableLogging: true,
+              logPrefix: "[UserManager]",
+            },
+          });
+
+          const initResult = await userManager.initialize();
+          if (initResult.success) {
+            console.log("✅ UserManager initialized successfully");
+
+            // Check if user is already logged in
+            if (userManager.isAuthenticated()) {
+              console.log("User already authenticated, redirecting to dashboard");
+              window.location.href = "dashboard.html";
+            }
+          } else {
+            showError("Failed to initialize UserManager: " + initResult.error?.message);
+          }
+        } catch (error) {
+          showError("UserManager initialization error: " + error.message);
         }
       });
 
-      // Simple form switching
+      // Form event handlers
+      document.addEventListener("DOMContentLoaded", () => {
+        // Login form
+        document.getElementById("loginForm").addEventListener("submit", handleLogin);
+
+        // Signup form
+        document.getElementById("signupForm").addEventListener("submit", handleSignup);
+
+        // Reset form
+        document.getElementById("resetForm").addEventListener("submit", handlePasswordReset);
+      });
+
+      async function handleLogin(event) {
+        event.preventDefault();
+
+        if (!userManager) {
+          showError("UserManager not initialized");
+          return;
+        }
+
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        if (!email || !password) {
+          showError("Please fill in all fields");
+          return;
+        }
+
+        setLoading(true);
+        clearMessages();
+
+        try {
+          const result = await userManager.signIn({email, password});
+
+          if (result.success) {
+            showSuccess("Login successful! Redirecting...");
+            setTimeout(() => {
+              window.location.href = "dashboard.html";
+            }, 1000);
+          } else {
+            showError(result.error?.message || "Login failed");
+          }
+        } catch (error) {
+          showError("Login error: " + error.message);
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function handleSignup(event) {
+        event.preventDefault();
+
+        if (!userManager) {
+          showSignupError("UserManager not initialized");
+          return;
+        }
+
+        const email = document.getElementById("signupEmail").value;
+        const password = document.getElementById("signupPassword").value;
+
+        if (!email || !password) {
+          showSignupError("Please fill in all fields");
+          return;
+        }
+
+        if (password.length < 6) {
+          showSignupError("Password must be at least 6 characters long");
+          return;
+        }
+
+        setSignupLoading(true);
+        clearMessages();
+
+        try {
+          const result = await userManager.signUp({email, password});
+
+          if (result.success) {
+            if (result.data.session) {
+              // User signed up and is immediately logged in
+              showSignupSuccess("Account created successfully! Redirecting...");
+              setTimeout(() => {
+                window.location.href = "dashboard.html";
+              }, 1000);
+            } else {
+              // User needs to verify email
+              showSignupSuccess("Account created! Please check your email to verify your account.");
+            }
+          } else {
+            showSignupError(result.error?.message || "Signup failed");
+          }
+        } catch (error) {
+          showSignupError("Signup error: " + error.message);
+        } finally {
+          setSignupLoading(false);
+        }
+      }
+
+      async function handlePasswordReset(event) {
+        event.preventDefault();
+
+        if (!userManager) {
+          showResetError("UserManager not initialized");
+          return;
+        }
+
+        const email = document.getElementById("resetEmail").value;
+
+        if (!email) {
+          showResetError("Please enter your email address");
+          return;
+        }
+
+        setResetLoading(true);
+        clearMessages();
+
+        try {
+          const result = await userManager.resetPassword({email});
+
+          if (result.success) {
+            showResetSuccess("Password reset email sent! Check your inbox.");
+          } else {
+            showResetError(result.error?.message || "Password reset failed");
+          }
+        } catch (error) {
+          showResetError("Password reset error: " + error.message);
+        } finally {
+          setResetLoading(false);
+        }
+      }
+
+      // UI Helper Functions
+      function setLoading(loading) {
+        const btn = document.getElementById("loginBtn");
+        btn.disabled = loading;
+        btn.textContent = loading ? "Signing In..." : "Sign In";
+      }
+
+      function setSignupLoading(loading) {
+        const btn = document.getElementById("signupBtn");
+        btn.disabled = loading;
+        btn.textContent = loading ? "Creating Account..." : "Create Account";
+      }
+
+      function setResetLoading(loading) {
+        const btn = document.getElementById("resetBtn");
+        btn.disabled = loading;
+        btn.textContent = loading ? "Sending..." : "Send Reset Link";
+      }
+
+      function showError(message) {
+        const errorDiv = document.getElementById("error");
+        errorDiv.textContent = message;
+        errorDiv.style.display = "block";
+      }
+
+      function showSuccess(message) {
+        const successDiv = document.getElementById("success");
+        successDiv.textContent = message;
+        successDiv.style.display = "block";
+      }
+
+      function showSignupError(message) {
+        const errorDiv = document.getElementById("signupError");
+        errorDiv.textContent = message;
+        errorDiv.style.display = "block";
+      }
+
+      function showSignupSuccess(message) {
+        const successDiv = document.getElementById("signupSuccess");
+        successDiv.textContent = message;
+        successDiv.style.display = "block";
+      }
+
+      function showResetError(message) {
+        const errorDiv = document.getElementById("resetError");
+        errorDiv.textContent = message;
+        errorDiv.style.display = "block";
+      }
+
+      function showResetSuccess(message) {
+        const successDiv = document.getElementById("resetSuccess");
+        successDiv.textContent = message;
+        successDiv.style.display = "block";
+      }
+
+      // Form switching functions
       function showLogin() {
         document.getElementById("loginForm").style.display = "block";
         document.getElementById("signupForm").style.display = "none";
@@ -238,10 +454,15 @@
         document.getElementById("signupSuccess").textContent = "";
         document.getElementById("resetError").textContent = "";
         document.getElementById("resetSuccess").textContent = "";
-      }
 
-      // Placeholder for UserManager integration
-      console.log("Test app loaded - ready for UserManager integration");
+        // Hide all message divs
+        document.getElementById("error").style.display = "none";
+        document.getElementById("success").style.display = "none";
+        document.getElementById("signupError").style.display = "none";
+        document.getElementById("signupSuccess").style.display = "none";
+        document.getElementById("resetError").style.display = "none";
+        document.getElementById("resetSuccess").style.display = "none";
+      }
 
       // Make functions global for onclick handlers
       window.showLogin = showLogin;

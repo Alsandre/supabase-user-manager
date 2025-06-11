@@ -249,84 +249,260 @@
     </div>
 
     <script type="module">
-      // Import navigation
+      // Import navigation and UserManager
       import {initializeNavigation} from "./navigation.js";
+      import {UserManager} from "../src/index.ts";
+      import config from "./config.js";
 
-      // Initialize navigation on page load
-      window.addEventListener("load", () => {
+      let userManager = null;
+
+      // Initialize navigation and UserManager on page load
+      window.addEventListener("load", async () => {
         initializeNavigation("dashboard.html");
-      });
-    </script>
 
-    <script>
-      // Check if user is authenticated on page load
-      window.addEventListener("load", () => {
-        checkAuthentication();
-        loadUserData();
+        // Initialize UserManager
+        try {
+          userManager = UserManager.init({
+            supabase: {
+              url: config.supabase.url,
+              anonKey: config.supabase.anonKey,
+            },
+            events: {
+              enableLogging: true,
+              logPrefix: "[Dashboard]",
+            },
+          });
+
+          const initResult = await userManager.initialize();
+          if (initResult.success) {
+            console.log("✅ UserManager initialized successfully");
+
+            // Check authentication
+            if (!userManager.isAuthenticated()) {
+              console.log("User not authenticated, redirecting to login");
+              window.location.href = "index.html";
+              return;
+            }
+
+            // Load user data
+            loadUserData();
+            setupEventListeners();
+          } else {
+            showError("Failed to initialize UserManager: " + initResult.error?.message);
+          }
+        } catch (error) {
+          showError("UserManager initialization error: " + error.message);
+        }
       });
 
-      function checkAuthentication() {
-        // Placeholder - will be replaced with UserManager integration
-        console.log("Checking authentication status...");
+      function setupEventListeners() {
+        // Listen for user state changes
+        userManager.on("user:stateChanged", (data) => {
+          console.log("User state changed:", data);
+          updateUserDisplay(data);
+        });
+
+        // Listen for session events
+        userManager.on("session:refreshed", (data) => {
+          console.log("Session refreshed:", data);
+          updateDebugInfo("Session refreshed automatically");
+        });
+
+        // Listen for auth events
+        userManager.on("auth:signedOut", () => {
+          console.log("User signed out");
+          window.location.href = "index.html";
+        });
       }
 
       function loadUserData() {
-        // Placeholder - will be replaced with UserManager integration
-        console.log("Loading user data...");
+        if (!userManager || !userManager.isAuthenticated()) {
+          showError("User not authenticated");
+          return;
+        }
 
-        // Mock data for testing
-        setTimeout(() => {
-          document.getElementById("userEmail").textContent = "test@example.com";
-          document.getElementById("detailEmail").textContent = "test@example.com";
-          document.getElementById("detailStatus").textContent = "Basic";
-          document.getElementById("detailPoints").textContent = "0";
-          document.getElementById("detailMemberSince").textContent = new Date().toLocaleDateString();
-          document.getElementById("detailLastSignIn").textContent = new Date().toLocaleString();
-          document.getElementById("detailEmailVerified").textContent = "Yes";
+        const user = userManager.getCurrentUser();
+        const session = userManager.getCurrentSession();
+        const userState = userManager.getUserState();
 
-          updateDebugInfo("Mock user data loaded");
-        }, 500);
+        if (userState.success) {
+          updateUserDisplay(userState.data);
+          updateDebugInfo("User data loaded successfully");
+        } else {
+          showError("Failed to load user data: " + userState.error?.message);
+        }
       }
 
-      function logout() {
-        if (confirm("Are you sure you want to logout?")) {
-          // Placeholder - will be replaced with UserManager integration
-          console.log("Logging out...");
+      function updateUserDisplay(userData) {
+        const {user, session, status, isAuthenticated} = userData;
+
+        if (user) {
+          // Update header
+          document.getElementById("userEmail").textContent = user.email || "Unknown";
+
+          // Update user details
+          document.getElementById("detailEmail").textContent = user.email || "-";
+          document.getElementById("detailStatus").textContent = status?.status || "Basic";
+          document.getElementById("detailPoints").textContent = status?.points || "0";
+          document.getElementById("detailMemberSince").textContent = user.created_at ? new Date(user.created_at).toLocaleDateString() : "-";
+          document.getElementById("detailLastSignIn").textContent = user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : "-";
+          document.getElementById("detailEmailVerified").textContent = user.email_confirmed_at ? "Yes" : "No";
+
+          // Update status badge
+          const statusBadge = document.getElementById("userStatus");
+          const statusValue = status?.status || "basic";
+          statusBadge.textContent = statusValue.charAt(0).toUpperCase() + statusValue.slice(1);
+          statusBadge.className = `status-badge status-${statusValue}`;
+
+          // Update status progress
+          updateStatusProgress(status);
+        }
+      }
+
+      function updateStatusProgress(status) {
+        const progressDiv = document.getElementById("statusProgress");
+        const currentStatus = status?.status || "basic";
+        const currentPoints = status?.points || 0;
+
+        const statusLevels = {
+          basic: {min: 0, max: 999, next: "silver"},
+          silver: {min: 1000, max: 4999, next: "gold"},
+          gold: {min: 5000, max: 9999, next: "platinum"},
+          platinum: {min: 10000, max: Infinity, next: null},
+        };
+
+        const level = statusLevels[currentStatus];
+        if (!level) return;
+
+        let progressHTML = `
+          <div style="margin-bottom: 1rem;">
+            <strong>Current Status:</strong> ${currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)} 
+            (${currentPoints} points)
+          </div>
+        `;
+
+        if (level.next) {
+          const nextLevel = statusLevels[level.next];
+          const pointsNeeded = nextLevel.min - currentPoints;
+          const progress = Math.min(100, (currentPoints / nextLevel.min) * 100);
+
+          progressHTML += `
+            <div style="margin-bottom: 0.5rem;">
+              <strong>Next Level:</strong> ${level.next.charAt(0).toUpperCase() + level.next.slice(1)} 
+              (${pointsNeeded} points needed)
+            </div>
+            <div style="background: #e9ecef; border-radius: 10px; height: 20px; overflow: hidden;">
+              <div style="background: #667eea; height: 100%; width: ${progress}%; transition: width 0.3s ease;"></div>
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.875rem; color: #666;">
+              Progress: ${progress.toFixed(1)}%
+            </div>
+          `;
+        } else {
+          progressHTML += `
+            <div style="color: #667eea; font-weight: bold;">
+              🎉 Maximum level reached!
+            </div>
+          `;
+        }
+
+        progressDiv.innerHTML = progressHTML;
+      }
+
+      // Action handlers
+      window.logout = async function () {
+        if (!confirm("Are you sure you want to logout?")) return;
+
+        if (!userManager) {
+          showError("UserManager not initialized");
+          return;
+        }
+
+        try {
           updateDebugInfo("Logout initiated");
+          const result = await userManager.signOut();
 
-          // Redirect to login page
-          setTimeout(() => {
-            window.location.href = "index.html";
-          }, 1000);
+          if (result.success) {
+            updateDebugInfo("Logout successful");
+            // Redirect will happen via event listener
+          } else {
+            showError("Logout failed: " + result.error?.message);
+          }
+        } catch (error) {
+          showError("Logout error: " + error.message);
         }
-      }
+      };
 
-      function updatePassword() {
-        const newPassword = prompt("Enter new password:");
-        if (newPassword && newPassword.length >= 6) {
-          // Placeholder - will be replaced with UserManager integration
-          console.log("Updating password...");
-          updateDebugInfo("Password update initiated");
-          showSuccess("Password update functionality will be implemented with UserManager");
-        } else if (newPassword) {
+      window.updatePassword = async function () {
+        const newPassword = prompt("Enter new password (minimum 6 characters):");
+        if (!newPassword) return;
+
+        if (newPassword.length < 6) {
           showError("Password must be at least 6 characters long");
+          return;
         }
-      }
 
-      function refreshSession() {
-        // Placeholder - will be replaced with UserManager integration
-        console.log("Refreshing session...");
-        updateDebugInfo("Session refresh initiated");
-        showSuccess("Session refresh functionality will be implemented with UserManager");
-      }
+        if (!userManager) {
+          showError("UserManager not initialized");
+          return;
+        }
 
-      function testEvents() {
-        // Placeholder - will be replaced with UserManager integration
-        console.log("Testing events...");
-        updateDebugInfo("Event system test initiated");
-        showSuccess("Event system testing will be implemented with UserManager");
-      }
+        try {
+          updateDebugInfo("Password update initiated");
+          const result = await userManager.updatePassword(newPassword);
 
+          if (result.success) {
+            showSuccess("Password updated successfully!");
+            updateDebugInfo("Password updated successfully");
+          } else {
+            showError("Password update failed: " + result.error?.message);
+          }
+        } catch (error) {
+          showError("Password update error: " + error.message);
+        }
+      };
+
+      window.refreshSession = async function () {
+        if (!userManager) {
+          showError("UserManager not initialized");
+          return;
+        }
+
+        try {
+          updateDebugInfo("Session refresh initiated");
+          const result = await userManager.refreshSession();
+
+          if (result.success) {
+            showSuccess("Session refreshed successfully!");
+            updateDebugInfo("Session refreshed manually");
+            loadUserData(); // Reload user data
+          } else {
+            showError("Session refresh failed: " + result.error?.message);
+          }
+        } catch (error) {
+          showError("Session refresh error: " + error.message);
+        }
+      };
+
+      window.testEvents = function () {
+        if (!userManager) {
+          showError("UserManager not initialized");
+          return;
+        }
+
+        updateDebugInfo("Testing event system...");
+
+        // Test custom event
+        userManager.emit("test:event", {message: "Test event fired!"});
+
+        // Show current event listeners
+        const eventNames = userManager.eventNames ? userManager.eventNames() : [];
+        updateDebugInfo(`Active events: ${eventNames.join(", ")}`);
+
+        showSuccess("Event system test completed - check debug info");
+      };
+
+      // UI Helper Functions
       function showError(message) {
         const errorDiv = document.getElementById("error");
         errorDiv.textContent = message;
@@ -353,7 +529,7 @@
       }
 
       // Initialize debug info
-      updateDebugInfo("Dashboard loaded - ready for UserManager integration");
+      updateDebugInfo("Dashboard loaded - UserManager integration active");
     </script>
   </body>
 </html>

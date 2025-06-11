@@ -163,20 +163,43 @@
     </div>
 
     <script type="module">
-      // Import navigation
+      // Import navigation and UserManager
       import {initializeNavigation} from "./navigation.js";
+      import {UserManager} from "../src/index.ts";
+      import config from "./config.js";
 
-      // Initialize navigation on page load
-      window.addEventListener("load", () => {
+      let userManager = null;
+
+      // Initialize navigation and UserManager on page load
+      window.addEventListener("load", async () => {
         initializeNavigation("verify.html");
-      });
-    </script>
 
-    <script>
-      // Initialize page
-      window.addEventListener("load", () => {
-        initializePage();
-        processVerification();
+        // Initialize UserManager
+        try {
+          userManager = UserManager.init({
+            supabase: {
+              url: config.supabase.url,
+              anonKey: config.supabase.anonKey,
+            },
+            events: {
+              enableLogging: true,
+              logPrefix: "[Verify]",
+            },
+          });
+
+          const initResult = await userManager.initialize();
+          if (initResult.success) {
+            console.log("✅ UserManager initialized successfully");
+
+            // Initialize page and process verification
+            initializePage();
+            await processVerification();
+          } else {
+            showErrorState("Failed to initialize UserManager: " + initResult.error?.message);
+          }
+        } catch (error) {
+          showErrorState("UserManager initialization error: " + error.message);
+        }
       });
 
       function initializePage() {
@@ -195,7 +218,7 @@
         console.log("URL Parameters:", paramsObj);
       }
 
-      function processVerification() {
+      async function processVerification() {
         // Get verification parameters from URL
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get("token");
@@ -204,29 +227,46 @@
 
         updateVerificationStatus("Processing verification...");
 
-        // Simulate verification process
-        setTimeout(() => {
+        try {
           if (token && type === "signup") {
-            // Simulate successful verification
-            if (token.length > 10) {
-              showSuccessState();
-              updateVerificationStatus("Email verified successfully");
+            // Handle email verification
+            updateVerificationStatus("Verifying email with Supabase...");
+
+            // The verification is handled automatically by Supabase when the user clicks the link
+            // We just need to check if the user is now authenticated
+            await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait for Supabase to process
+
+            if (userManager.isAuthenticated()) {
+              const user = userManager.getCurrentUser();
+              if (user && user.email_confirmed_at) {
+                showSuccessState();
+                updateVerificationStatus("Email verified successfully");
+              } else {
+                showErrorState("Email verification incomplete");
+                updateVerificationStatus("Verification failed - email not confirmed");
+              }
             } else {
-              showErrorState("Invalid verification token");
-              updateVerificationStatus("Verification failed - invalid token");
+              // Check if verification was successful but user needs to sign in
+              showAlreadyVerifiedState();
+              updateVerificationStatus("Email verified - please sign in");
             }
           } else if (token && type === "recovery") {
             // Handle password recovery
+            updateVerificationStatus("Processing password recovery...");
             showPasswordRecoveryState();
             updateVerificationStatus("Password recovery link processed");
           } else if (!token) {
             showErrorState("No verification token found in URL");
             updateVerificationStatus("No token provided");
           } else {
-            showErrorState("Unknown verification type");
+            showErrorState("Unknown verification type: " + type);
             updateVerificationStatus("Unknown verification type: " + type);
           }
-        }, 2000); // Simulate network delay
+        } catch (error) {
+          console.error("Verification error:", error);
+          showErrorState("Verification failed: " + error.message);
+          updateVerificationStatus("Verification error: " + error.message);
+        }
       }
 
       function showSuccessState() {
@@ -250,7 +290,7 @@
       function showPasswordRecoveryState() {
         hideAllStates();
         // For now, redirect to login with a message
-        alert("Password recovery functionality will be implemented with UserManager integration");
+        alert("Password recovery functionality will redirect you to the login page where you can reset your password.");
         window.location.href = "index.html";
       }
 
@@ -261,8 +301,21 @@
         document.getElementById("alreadyVerifiedState").classList.add("hidden");
       }
 
-      function resendVerification() {
-        // Placeholder - will be replaced with UserManager integration
+      window.resendVerification = async function () {
+        if (!userManager) {
+          updateVerificationStatus("UserManager not initialized");
+          return;
+        }
+
+        // Get email from URL params or prompt user
+        const urlParams = new URLSearchParams(window.location.search);
+        let email = urlParams.get("email");
+
+        if (!email) {
+          email = prompt("Please enter your email address:");
+          if (!email) return;
+        }
+
         console.log("Resending verification email...");
         updateVerificationStatus("Resend verification requested");
 
@@ -271,13 +324,27 @@
         btn.disabled = true;
         btn.textContent = "Sending...";
 
-        setTimeout(() => {
+        try {
+          const result = await userManager.resendVerification(email);
+
+          if (result.success) {
+            btn.disabled = false;
+            btn.textContent = "Resend Verification Email";
+            alert("Verification email sent! Please check your inbox.");
+            updateVerificationStatus("Verification email resent successfully");
+          } else {
+            btn.disabled = false;
+            btn.textContent = "Resend Verification Email";
+            alert("Failed to resend verification email: " + result.error?.message);
+            updateVerificationStatus("Failed to resend verification email");
+          }
+        } catch (error) {
           btn.disabled = false;
           btn.textContent = "Resend Verification Email";
-          alert("Verification email resent! (This will be implemented with UserManager)");
-          updateVerificationStatus("Verification email resent (simulated)");
-        }, 2000);
-      }
+          alert("Error resending verification email: " + error.message);
+          updateVerificationStatus("Error resending verification email");
+        }
+      };
 
       function updateVerificationStatus(status) {
         document.getElementById("verificationStatus").textContent = status;
@@ -289,7 +356,7 @@
         processVerification();
       });
 
-      console.log("Email verification page ready for UserManager integration");
+      console.log("Email verification page ready with UserManager integration");
     </script>
   </body>
 </html>
