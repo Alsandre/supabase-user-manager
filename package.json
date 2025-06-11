@@ -1,6 +1,6 @@
 {
-  "name": "@alsandre/user-manager",
-  "version": "1.0.0",
+  "name": "supabase-user-manager-with-typescript",
+  "version": "1.0.1",
   "description": "Complete TypeScript library for Supabase user management with authentication, sessions, and status system",
   "type": "module",
   "main": "./dist/index.js",
