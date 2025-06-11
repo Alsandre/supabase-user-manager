@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Status System Test - User Manager Library</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+        position: relative;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+
+      .back-button:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+      }
+
+      h1 {
+        color: #2d3748;
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+      }
+
+      .subtitle {
+        color: #718096;
+        font-size: 1.1rem;
+      }
+
+      .test-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+      }
+
+      .test-section {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e2e8f0;
+      }
+
+      .section-title {
+        color: #2d3748;
+        font-size: 1.3rem;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e2e8f0;
+      }
+
+      .status-display {
+        background: #f7fafc;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #4299e1;
+      }
+
+      .status-level {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+
+      .status-level.basic {
+        color: #6c757d;
+      }
+      .status-level.silver {
+        color: #c0c0c0;
+      }
+      .status-level.gold {
+        color: #ffd700;
+      }
+      .status-level.platinum {
+        color: #e5e4e2;
+      }
+
+      .points-display {
+        font-size: 1.2rem;
+        color: #4a5568;
+        margin-bottom: 15px;
+      }
+
+      .progress-bar {
+        background: #e2e8f0;
+        border-radius: 10px;
+        height: 20px;
+        overflow: hidden;
+        margin-bottom: 10px;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #4299e1, #3182ce);
+        transition: width 0.5s ease;
+        border-radius: 10px;
+      }
+
+      .progress-text {
+        font-size: 0.9rem;
+        color: #718096;
+        text-align: center;
+      }
+
+      .benefits-list {
+        list-style: none;
+        margin-top: 15px;
+      }
+
+      .benefits-list li {
+        background: #e6fffa;
+        margin: 5px 0;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border-left: 3px solid #38b2ac;
+        font-size: 0.9rem;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #4a5568;
+        font-weight: 500;
+      }
+
+      .form-group input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s ease;
+      }
+
+      .form-group input:focus {
+        outline: none;
+        border-color: #4299e1;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #4299e1, #3182ce);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        margin: 5px;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(66, 153, 225, 0.4);
+      }
+
+      .btn:disabled {
+        background: #a0aec0;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .btn-secondary {
+        background: linear-gradient(135deg, #38b2ac, #319795);
+      }
+
+      .btn-secondary:hover {
+        box-shadow: 0 5px 15px rgba(56, 178, 172, 0.4);
+      }
+
+      .btn-danger {
+        background: linear-gradient(135deg, #e53e3e, #c53030);
+      }
+
+      .btn-danger:hover {
+        box-shadow: 0 5px 15px rgba(229, 62, 62, 0.4);
+      }
+
+      .event-log {
+        background: #1a202c;
+        color: #e2e8f0;
+        border-radius: 10px;
+        padding: 20px;
+        height: 300px;
+        overflow-y: auto;
+        font-family: "Monaco", "Menlo", monospace;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .event-entry {
+        margin-bottom: 8px;
+        padding: 5px;
+        border-radius: 4px;
+      }
+
+      .event-entry.status {
+        background: rgba(66, 153, 225, 0.2);
+      }
+      .event-entry.error {
+        background: rgba(229, 62, 62, 0.2);
+      }
+      .event-entry.success {
+        background: rgba(56, 178, 172, 0.2);
+      }
+
+      .timestamp {
+        color: #a0aec0;
+        font-size: 11px;
+      }
+
+      .auth-warning {
+        background: #fed7d7;
+        border: 1px solid #feb2b2;
+        color: #c53030;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 20px;
+        color: #718096;
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #e2e8f0;
+        border-radius: 50%;
+        border-top-color: #4299e1;
+        animation: spin 1s ease-in-out infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .full-width {
+        grid-column: 1 / -1;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        background: #f7fafc;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        border: 1px solid #e2e8f0;
+      }
+
+      .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #2d3748;
+      }
+
+      .stat-label {
+        font-size: 0.9rem;
+        color: #718096;
+        margin-top: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <button class="back-button" onclick="history.back()">← Back</button>
+        <h1>🏆 User Status System Test</h1>
+        <p class="subtitle">Test user status levels, points management, and progression system</p>
+      </div>
+
+      <div id="authWarning" class="auth-warning" style="display: none">⚠️ You must be signed in to test the User Status System. Please sign in first.</div>
+
+      <div id="loadingIndicator" class="loading">
+        <div class="spinner"></div>
+        <p>Loading User Status System...</p>
+      </div>
+
+      <div id="testContent" style="display: none">
+        <div class="test-grid">
+          <!-- Current Status Display -->
+          <div class="test-section">
+            <h2 class="section-title">📊 Current Status</h2>
+            <div id="statusDisplay" class="status-display">
+              <div id="statusLevel" class="status-level">Loading...</div>
+              <div id="pointsDisplay" class="points-display">Points: Loading...</div>
+              <div class="progress-bar">
+                <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+              </div>
+              <div id="progressText" class="progress-text">Loading progress...</div>
+              <ul id="benefitsList" class="benefits-list"></ul>
+            </div>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div id="currentPointsStat" class="stat-value">0</div>
+                <div class="stat-label">Current Points</div>
+              </div>
+              <div class="stat-card">
+                <div id="pointsToNextStat" class="stat-value">0</div>
+                <div class="stat-label">Points to Next Level</div>
+              </div>
+              <div class="stat-card">
+                <div id="progressPercentStat" class="stat-value">0%</div>
+                <div class="stat-label">Progress</div>
+              </div>
+            </div>
+            <button id="refreshStatusBtn" class="btn">🔄 Refresh Status</button>
+            <button id="initializeStatusBtn" class="btn btn-secondary">🚀 Initialize Status</button>
+          </div>
+
+          <!-- Points Management -->
+          <div class="test-section">
+            <h2 class="section-title">⚡ Points Management</h2>
+            <div class="form-group">
+              <label for="setPointsInput">Set Total Points:</label>
+              <input type="number" id="setPointsInput" min="0" max="50000" value="0" placeholder="Enter total points" />
+              <button id="setPointsBtn" class="btn">📝 Set Points</button>
+            </div>
+            <div class="form-group">
+              <label for="addPointsInput">Add Points:</label>
+              <input type="number" id="addPointsInput" min="1" max="10000" value="100" placeholder="Enter points to add" />
+              <button id="addPointsBtn" class="btn btn-secondary">➕ Add Points</button>
+            </div>
+            <div class="form-group">
+              <label>Quick Actions:</label>
+              <button id="add100Btn" class="btn">+100 Points</button>
+              <button id="add500Btn" class="btn">+500 Points</button>
+              <button id="add1000Btn" class="btn">+1000 Points</button>
+              <button id="resetPointsBtn" class="btn btn-danger">🔄 Reset to 0</button>
+            </div>
+          </div>
+
+          <!-- Status Level Information -->
+          <div class="test-section">
+            <h2 class="section-title">📋 Status Level Information</h2>
+            <div id="levelInfoDisplay">
+              <div class="form-group">
+                <label for="levelSelect">Select Level to View:</label>
+                <select id="levelSelect" style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px">
+                  <option value="basic">Basic</option>
+                  <option value="silver">Silver</option>
+                  <option value="gold">Gold</option>
+                  <option value="platinum">Platinum</option>
+                </select>
+              </div>
+              <div id="selectedLevelInfo" class="status-display">
+                <!-- Level info will be populated here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Event Log -->
+          <div class="test-section">
+            <h2 class="section-title">📝 Event Log</h2>
+            <div id="eventLog" class="event-log">
+              <div class="event-entry"><span class="timestamp">[System]</span> User Status System Test initialized</div>
+            </div>
+            <button id="clearLogBtn" class="btn btn-danger">🗑️ Clear Log</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import {UserManager} from "./dist/index.js";
+
+      class UserStatusTest {
+        constructor() {
+          this.userManager = null;
+          this.currentStatus = null;
+          this.eventLog = document.getElementById("eventLog");
+          this.init();
+        }
+
+        async init() {
+          try {
+            // Initialize UserManager with config
+            const config = {
+              supabase: {
+                url: import.meta.env.VITE_SUPABASE_URL,
+                anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+              },
+              events: {
+                enableLogging: true,
+                maxListeners: 100,
+              },
+            };
+
+            // Get UserManager instance with config
+            this.userManager = UserManager.getInstance(config);
+
+            // Initialize UserManager
+            const initResult = await this.userManager.initialize();
+            if (!initResult.success) {
+              throw initResult.error || new Error("Failed to initialize UserManager");
+            }
+
+            // Check if user is authenticated
+            if (!this.userManager.isAuthenticated()) {
+              this.showAuthWarning();
+              return;
+            }
+
+            // Set up event listeners
+            this.setupEventListeners();
+            this.setupUserManagerEvents();
+
+            // Initialize status and load current status
+            await this.loadCurrentStatus();
+
+            // Show test content
+            document.getElementById("loadingIndicator").style.display = "none";
+            document.getElementById("testContent").style.display = "block";
+
+            this.logEvent("success", "User Status System initialized successfully");
+          } catch (error) {
+            this.logEvent("error", `Initialization failed: ${error.message}`);
+            console.error("UserStatusTest initialization error:", error);
+          }
+        }
+
+        showAuthWarning() {
+          document.getElementById("loadingIndicator").style.display = "none";
+          document.getElementById("authWarning").style.display = "block";
+        }
+
+        setupEventListeners() {
+          // Status management
+          document.getElementById("refreshStatusBtn").addEventListener("click", () => this.refreshStatus());
+          document.getElementById("initializeStatusBtn").addEventListener("click", () => this.initializeStatus());
+
+          // Points management
+          document.getElementById("setPointsBtn").addEventListener("click", () => this.setPoints());
+          document.getElementById("addPointsBtn").addEventListener("click", () => this.addPoints());
+
+          // Quick actions
+          document.getElementById("add100Btn").addEventListener("click", () => this.addQuickPoints(100));
+          document.getElementById("add500Btn").addEventListener("click", () => this.addQuickPoints(500));
+          document.getElementById("add1000Btn").addEventListener("click", () => this.addQuickPoints(1000));
+          document.getElementById("resetPointsBtn").addEventListener("click", () => this.resetPoints());
+
+          // Level info
+          document.getElementById("levelSelect").addEventListener("change", (e) => this.showLevelInfo(e.target.value));
+
+          // Event log
+          document.getElementById("clearLogBtn").addEventListener("click", () => this.clearEventLog());
+
+          // Initialize level info display
+          this.showLevelInfo("basic");
+        }
+
+        setupUserManagerEvents() {
+          // Status events
+          this.userManager.on("status:updated", (data) => {
+            this.logEvent("status", `Status updated: ${data.status.status} (${data.status.points} points)`);
+            this.currentStatus = data.status;
+            this.updateStatusDisplay();
+          });
+
+          this.userManager.on("status:levelChanged", (data) => {
+            this.logEvent("status", `🎉 Level changed: ${data.previousStatus} → ${data.newStatus} (${data.points} points)`);
+          });
+
+          this.userManager.on("status:pointsAdded", (data) => {
+            this.logEvent("status", `Points added: +${data.pointsAdded} (Total: ${data.newTotal})`);
+          });
+
+          this.userManager.on("status:initialized", (data) => {
+            this.logEvent("status", `Status initialized: ${data.status.status} (${data.status.points} points)`);
+            this.currentStatus = data.status;
+            this.updateStatusDisplay();
+          });
+
+          // Error events
+          this.userManager.on("error:general", (data) => {
+            this.logEvent("error", `Error: ${data.message}`);
+          });
+        }
+
+        async loadCurrentStatus() {
+          try {
+            const result = await this.userManager.getUserStatus();
+            if (result.success) {
+              this.currentStatus = result.data;
+              this.updateStatusDisplay();
+              this.logEvent("success", `Current status loaded: ${result.data.status} (${result.data.points} points)`);
+            } else {
+              this.logEvent("error", `Failed to load status: ${result.error?.message}`);
+            }
+          } catch (error) {
+            this.logEvent("error", `Error loading status: ${error.message}`);
+          }
+        }
+
+        async refreshStatus() {
+          this.setButtonLoading("refreshStatusBtn", true);
+          try {
+            await this.loadCurrentStatus();
+          } finally {
+            this.setButtonLoading("refreshStatusBtn", false);
+          }
+        }
+
+        async initializeStatus() {
+          this.setButtonLoading("initializeStatusBtn", true);
+          try {
+            const result = await this.userManager.initializeUserStatus();
+            if (result.success) {
+              this.logEvent("success", `Status initialized: ${result.data.status} (${result.data.points} points)`);
+            } else {
+              this.logEvent("error", `Failed to initialize status: ${result.error?.message}`);
+            }
+          } catch (error) {
+            this.logEvent("error", `Error initializing status: ${error.message}`);
+          } finally {
+            this.setButtonLoading("initializeStatusBtn", false);
+          }
+        }
+
+        async setPoints() {
+          const points = parseInt(document.getElementById("setPointsInput").value);
+          if (isNaN(points) || points < 0) {
+            this.logEvent("error", "Invalid points value");
+            return;
+          }
+
+          this.setButtonLoading("setPointsBtn", true);
+          try {
+            const result = await this.userManager.updateUserPoints(points);
+            if (result.success) {
+              this.logEvent("success", `Points set to ${points}`);
+            } else {
+              this.logEvent("error", `Failed to set points: ${result.error?.message}`);
+            }
+          } catch (error) {
+            this.logEvent("error", `Error setting points: ${error.message}`);
+          } finally {
+            this.setButtonLoading("setPointsBtn", false);
+          }
+        }
+
+        async addPoints() {
+          const points = parseInt(document.getElementById("addPointsInput").value);
+          if (isNaN(points) || points <= 0) {
+            this.logEvent("error", "Invalid points value");
+            return;
+          }
+
+          this.setButtonLoading("addPointsBtn", true);
+          try {
+            const result = await this.userManager.addUserPoints(points);
+            if (result.success) {
+              this.logEvent("success", `Added ${points} points`);
+            } else {
+              this.logEvent("error", `Failed to add points: ${result.error?.message}`);
+            }
+          } catch (error) {
+            this.logEvent("error", `Error adding points: ${error.message}`);
+          } finally {
+            this.setButtonLoading("addPointsBtn", false);
+          }
+        }
+
+        async addQuickPoints(points) {
+          try {
+            const result = await this.userManager.addUserPoints(points);
+            if (result.success) {
+              this.logEvent("success", `Quick add: +${points} points`);
+            } else {
+              this.logEvent("error", `Failed to add points: ${result.error?.message}`);
+            }
+          } catch (error) {
+            this.logEvent("error", `Error adding points: ${error.message}`);
+          }
+        }
+
+        async resetPoints() {
+          if (!confirm("Are you sure you want to reset points to 0?")) {
+            return;
+          }
+
+          this.setButtonLoading("resetPointsBtn", true);
+          try {
+            const result = await this.userManager.updateUserPoints(0);
+            if (result.success) {
+              this.logEvent("success", "Points reset to 0");
+            } else {
+              this.logEvent("error", `Failed to reset points: ${result.error?.message}`);
+            }
+          } catch (error) {
+            this.logEvent("error", `Error resetting points: ${error.message}`);
+          } finally {
+            this.setButtonLoading("resetPointsBtn", false);
+          }
+        }
+
+        updateStatusDisplay() {
+          if (!this.currentStatus) return;
+
+          const statusLevel = document.getElementById("statusLevel");
+          const pointsDisplay = document.getElementById("pointsDisplay");
+          const progressFill = document.getElementById("progressFill");
+          const progressText = document.getElementById("progressText");
+          const benefitsList = document.getElementById("benefitsList");
+
+          // Update status level
+          statusLevel.textContent = this.currentStatus.status.toUpperCase();
+          statusLevel.className = `status-level ${this.currentStatus.status}`;
+
+          // Update points
+          pointsDisplay.textContent = `Points: ${this.currentStatus.points.toLocaleString()}`;
+
+          // Get progress information
+          const progress = this.userManager.getStatusProgress();
+          if (progress) {
+            // Update progress bar
+            progressFill.style.width = `${progress.progressPercentage}%`;
+
+            if (progress.nextLevel) {
+              progressText.textContent = `${progress.pointsToNext} points to ${progress.nextLevel.toUpperCase()}`;
+            } else {
+              progressText.textContent = "Maximum level reached!";
+            }
+
+            // Update stats
+            document.getElementById("currentPointsStat").textContent = progress.currentPoints.toLocaleString();
+            document.getElementById("pointsToNextStat").textContent = progress.pointsToNext.toLocaleString();
+            document.getElementById("progressPercentStat").textContent = `${Math.round(progress.progressPercentage)}%`;
+          }
+
+          // Update benefits
+          const levelInfo = this.userManager.getStatusLevelInfo(this.currentStatus.status);
+          benefitsList.innerHTML = "";
+          levelInfo.benefits.forEach((benefit) => {
+            const li = document.createElement("li");
+            li.textContent = benefit;
+            benefitsList.appendChild(li);
+          });
+        }
+
+        showLevelInfo(level) {
+          const levelInfo = this.userManager.getStatusLevelInfo(level);
+          const display = document.getElementById("selectedLevelInfo");
+
+          display.innerHTML = `
+                    <div class="status-level ${level}">${levelInfo.name}</div>
+                    <div class="points-display">Required: ${levelInfo.minPoints.toLocaleString()} - ${levelInfo.maxPoints === Infinity ? "∞" : levelInfo.maxPoints.toLocaleString()} points</div>
+                    <div class="progress-text">Next Level: ${levelInfo.nextLevel ? levelInfo.nextLevel.toUpperCase() : "Maximum Level"}</div>
+                    <ul class="benefits-list">
+                        ${levelInfo.benefits.map((benefit) => `<li>${benefit}</li>`).join("")}
+                    </ul>
+                `;
+        }
+
+        setButtonLoading(buttonId, loading) {
+          const button = document.getElementById(buttonId);
+          if (loading) {
+            button.disabled = true;
+            button.innerHTML = '<div class="spinner"></div> Loading...';
+          } else {
+            button.disabled = false;
+            // Restore original text based on button ID
+            const originalTexts = {
+              refreshStatusBtn: "🔄 Refresh Status",
+              initializeStatusBtn: "🚀 Initialize Status",
+              setPointsBtn: "📝 Set Points",
+              addPointsBtn: "➕ Add Points",
+              resetPointsBtn: "🔄 Reset to 0",
+            };
+            button.innerHTML = originalTexts[buttonId] || "Button";
+          }
+        }
+
+        logEvent(type, message) {
+          const timestamp = new Date().toLocaleTimeString();
+          const entry = document.createElement("div");
+          entry.className = `event-entry ${type}`;
+          entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+
+          this.eventLog.appendChild(entry);
+          this.eventLog.scrollTop = this.eventLog.scrollHeight;
+        }
+
+        clearEventLog() {
+          this.eventLog.innerHTML = '<div class="event-entry"><span class="timestamp">[System]</span> Event log cleared</div>';
+        }
+      }
+
+      // Initialize the test when DOM is loaded
+      document.addEventListener("DOMContentLoaded", () => {
+        new UserStatusTest();
+      });
+    </script>
+  </body>
+</html>

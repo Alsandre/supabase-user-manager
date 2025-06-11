@@ -17,6 +17,7 @@ export function createNavigation(currentPage = "") {
         {name: "Error Handling", path: "test-error-handling.html"},
         {name: "Email Auth", path: "test-emailauth.html"},
         {name: "Session Manager", path: "test-session.html"},
+        {name: "User Status", path: "test-user-status.html"},
         {name: "Enhanced Manager", path: "test-enhanced-usermanager.html"},
       ],
     },

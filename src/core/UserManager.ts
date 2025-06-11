@@ -1,5 +1,6 @@
 import type {UserManagerConfig} from "../types/Config";
-import type {SupabaseUser, UserSession, UserStatus, UserStatusType} from "../types/User";
+import type {SupabaseUser, UserSession, UserStatusType} from "../types/User";
+import type {UserStatus, UserStatusLevel} from "../types/Status";
 import type {UserManagerEvents, UserManagerEventName, EventData} from "../types/Events";
 import type {SignUpCredentials, SignInCredentials, PasswordResetRequest} from "../types/Auth";
 import {EventEmitter} from "./EventEmitter";
@@ -8,6 +9,7 @@ import {ErrorHandler, UserManagerError, UserManagerErrorType, type OperationResu
 import {Validators} from "../utils/Validators";
 import {EmailAuthService} from "../services/EmailAuthService";
 import {SessionManager, type SessionStorageConfig} from "../services/SessionManager";
+import {UserStatusService} from "../services/UserStatusService";
 
 /**
  * Main UserManager class - Singleton pattern
@@ -20,6 +22,7 @@ export class UserManager {
   private supabase: SupabaseClient;
   private emailAuthService: EmailAuthService;
   private sessionManager: SessionManager;
+  private userStatusService: UserStatusService;
   private isInitialized: boolean = false;
   private currentUser: SupabaseUser | null = null;
   private currentSession: UserSession | null = null;
@@ -68,6 +71,9 @@ export class UserManager {
         refreshThreshold: 5,
         enableMultiTabSync: true,
       });
+
+      // Initialize UserStatusService
+      this.userStatusService = new UserStatusService(this.supabase);
     } catch (error) {
       throw ErrorHandler.createError(UserManagerErrorType.INITIALIZATION_ERROR, "Failed to initialize Supabase client", {
         originalError: error as Error,
@@ -648,6 +654,178 @@ export class UserManager {
       const userManagerError = ErrorHandler.createError(UserManagerErrorType.SESSION_ERROR, "Failed to get session state", {originalError: error as Error});
       return {success: false, error: userManagerError};
     }
+  }
+
+  // User Status Methods
+  /**
+   * Get current user status from database
+   */
+  async getUserStatus(): Promise<OperationResult<UserStatus>> {
+    this.validateReady();
+
+    if (!this.isAuthenticated()) {
+      throw ErrorHandler.createError(UserManagerErrorType.AUTH_ERROR, "User must be authenticated to get status");
+    }
+
+    return await ErrorHandler.wrapOperation(
+      async () => {
+        const result = await this.userStatusService.getUserStatus();
+
+        if (result.success) {
+          this.currentStatus = result.data;
+          this.emit("status:updated", {status: result.data});
+          return result.data;
+        }
+
+        throw result.error || ErrorHandler.createError(UserManagerErrorType.DATABASE_ERROR, "Failed to get user status");
+      },
+      UserManagerErrorType.DATABASE_ERROR,
+      "getUserStatus"
+    );
+  }
+
+  /**
+   * Update user points and recalculate status
+   */
+  async updateUserPoints(points: number): Promise<OperationResult<UserStatus>> {
+    this.validateReady();
+
+    if (!this.isAuthenticated()) {
+      throw ErrorHandler.createError(UserManagerErrorType.AUTH_ERROR, "User must be authenticated to update points");
+    }
+
+    return await ErrorHandler.wrapOperation(
+      async () => {
+        const result = await this.userStatusService.updateUserPoints(points);
+
+        if (result.success) {
+          const previousStatus = this.currentStatus;
+          this.currentStatus = result.data;
+
+          this.emit("status:updated", {status: result.data});
+
+          // Check if status level changed
+          if (previousStatus && previousStatus.status !== result.data.status) {
+            this.emit("status:levelChanged", {
+              previousStatus: previousStatus.status,
+              newStatus: result.data.status,
+              points: result.data.points,
+            });
+          }
+
+          return result.data;
+        }
+
+        throw result.error || ErrorHandler.createError(UserManagerErrorType.DATABASE_ERROR, "Failed to update user points");
+      },
+      UserManagerErrorType.DATABASE_ERROR,
+      "updateUserPoints"
+    );
+  }
+
+  /**
+   * Add points to current user total
+   */
+  async addUserPoints(pointsToAdd: number): Promise<OperationResult<UserStatus>> {
+    this.validateReady();
+
+    if (!this.isAuthenticated()) {
+      throw ErrorHandler.createError(UserManagerErrorType.AUTH_ERROR, "User must be authenticated to add points");
+    }
+
+    return await ErrorHandler.wrapOperation(
+      async () => {
+        const result = await this.userStatusService.addPoints(pointsToAdd);
+
+        if (result.success) {
+          const previousStatus = this.currentStatus;
+          this.currentStatus = result.data;
+
+          this.emit("status:updated", {status: result.data});
+          this.emit("status:pointsAdded", {pointsAdded: pointsToAdd, newTotal: result.data.points});
+
+          // Check if status level changed
+          if (previousStatus && previousStatus.status !== result.data.status) {
+            this.emit("status:levelChanged", {
+              previousStatus: previousStatus.status,
+              newStatus: result.data.status,
+              points: result.data.points,
+            });
+          }
+
+          return result.data;
+        }
+
+        throw result.error || ErrorHandler.createError(UserManagerErrorType.DATABASE_ERROR, "Failed to add user points");
+      },
+      UserManagerErrorType.DATABASE_ERROR,
+      "addUserPoints"
+    );
+  }
+
+  /**
+   * Get status level information and benefits
+   */
+  getStatusLevelInfo(level: UserStatusLevel): {
+    name: string;
+    minPoints: number;
+    maxPoints: number;
+    nextLevel: UserStatusLevel | null;
+    benefits: string[];
+    color: string;
+  } {
+    return this.userStatusService.getStatusLevelInfo(level);
+  }
+
+  /**
+   * Get progress to next status level
+   */
+  getStatusProgress(): {
+    currentLevel: UserStatusLevel;
+    currentPoints: number;
+    nextLevel: UserStatusLevel | null;
+    pointsToNext: number;
+    progressPercentage: number;
+  } | null {
+    if (!this.currentStatus) {
+      return null;
+    }
+
+    return this.userStatusService.getStatusProgress(this.currentStatus);
+  }
+
+  /**
+   * Initialize user status (create default record if none exists)
+   */
+  async initializeUserStatus(): Promise<OperationResult<UserStatus>> {
+    this.validateReady();
+
+    if (!this.isAuthenticated()) {
+      throw ErrorHandler.createError(UserManagerErrorType.AUTH_ERROR, "User must be authenticated to initialize status");
+    }
+
+    return await ErrorHandler.wrapOperation(
+      async () => {
+        const result = await this.userStatusService.initializeUserStatus();
+
+        if (result.success) {
+          this.currentStatus = result.data;
+          this.emit("status:initialized", {status: result.data});
+          return result.data;
+        }
+
+        throw result.error || ErrorHandler.createError(UserManagerErrorType.DATABASE_ERROR, "Failed to initialize user status");
+      },
+      UserManagerErrorType.DATABASE_ERROR,
+      "initializeUserStatus"
+    );
+  }
+
+  /**
+   * Get UserStatusService instance for advanced operations
+   */
+  getUserStatusService(): UserStatusService {
+    return this.userStatusService;
   }
 
   /**

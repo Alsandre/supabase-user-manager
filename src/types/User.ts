@@ -1,4 +1,5 @@
 import type {User as SupabaseUser} from "@supabase/supabase-js";
+import type {UserStatus} from "./Status";
 
 // Re-export Supabase User type
 export type {User as SupabaseUser} from "@supabase/supabase-js";
@@ -16,16 +17,7 @@ export interface UserProfile {
   app_metadata: Record<string, any>;
 }
 
-// User status related types
-export interface UserStatus {
-  id: string;
-  user_id: string;
-  status: UserStatusType;
-  points: number;
-  created_at: string;
-  updated_at: string;
-}
-
+// User status type (re-exported from Status.ts)
 export type UserStatusType = "basic" | "silver" | "gold" | "platinum";
 
 // User session information

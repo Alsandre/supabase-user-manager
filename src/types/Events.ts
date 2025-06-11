@@ -30,6 +30,9 @@ export type UserManagerEvents = {
   "status:updated": {status: UserStatus; previousStatus?: UserStatus};
   "status:upgraded": {newStatus: UserStatus; oldStatus: UserStatus};
   "status:pointsChanged": {points: number; previousPoints: number; user: SupabaseUser};
+  "status:initialized": {status: UserStatus};
+  "status:levelChanged": {previousStatus: string; newStatus: string; points: number};
+  "status:pointsAdded": {pointsAdded: number; newTotal: number};
 
   // Session events
   "session:started": {session: UserSession};

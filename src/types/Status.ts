@@ -1,5 +1,18 @@
 import type {UserStatusType} from "./User";
 
+// User status levels
+export type UserStatusLevel = "basic" | "silver" | "gold" | "platinum";
+
+// Complete user status record from database
+export interface UserStatus {
+  id: string;
+  userId: string;
+  status: UserStatusLevel;
+  points: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Status benefits configuration
 export interface StatusBenefits {
   status: UserStatusType;

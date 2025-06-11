@@ -21,6 +21,9 @@ export enum UserManagerErrorType {
   VALIDATION_ERROR = "VALIDATION_ERROR",
   INVALID_INPUT = "INVALID_INPUT",
 
+  // Database errors
+  DATABASE_ERROR = "DATABASE_ERROR",
+
   // Status errors
   STATUS_ERROR = "STATUS_ERROR",
   PERMISSION_ERROR = "PERMISSION_ERROR",
