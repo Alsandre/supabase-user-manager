@@ -35,6 +35,7 @@ export type UserManagerEvents = {
   "session:started": {session: UserSession};
   "session:ended": {reason: "logout" | "expired" | "error"};
   "session:refreshed": {session: UserSession};
+  "session:restored": {session: UserSession};
   "session:syncAcrossTabs": {session: UserSession | null};
 
   // General events

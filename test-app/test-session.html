@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SessionManager Test Suite</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+      }
+      .container {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      }
+      h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .test-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        background: #f9f9f9;
+      }
+      .test-section h3 {
+        margin-top: 0;
+        color: #555;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: #333;
+      }
+      input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 16px;
+        box-sizing: border-box;
+      }
+      button {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-right: 10px;
+        margin-bottom: 10px;
+      }
+      button:hover {
+        background: #5a6fd8;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      .result {
+        margin-top: 15px;
+        padding: 10px;
+        border-radius: 6px;
+        font-family: monospace;
+        font-size: 14px;
+        white-space: pre-wrap;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      .warning {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+      }
+      .status {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+      }
+      .session-info {
+        background: #e7f3ff;
+        border: 1px solid #b3d9ff;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      @media (max-width: 768px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔄 SessionManager Test Suite</h1>
+
+      <div class="status" id="status"><strong>Status:</strong> Initializing UserManager...</div>
+
+      <div class="session-info" id="sessionInfo"><strong>Session Info:</strong> Loading...</div>
+
+      <div class="grid">
+        <!-- Authentication Section -->
+        <div class="test-section">
+          <h3>🔐 Authentication</h3>
+          <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" placeholder="test@example.com" />
+          </div>
+          <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" placeholder="Password123!" />
+          </div>
+          <button onclick="testSignIn()">Sign In</button>
+          <button onclick="testSignOut()">Sign Out</button>
+          <div id="authResult" class="result" style="display: none"></div>
+        </div>
+
+        <!-- Session State Section -->
+        <div class="test-section">
+          <h3>📊 Session State</h3>
+          <button onclick="getSessionState()">Get Session State</button>
+          <button onclick="getCurrentSession()">Get Current Session</button>
+          <button onclick="refreshSession()">Refresh Session</button>
+          <div id="sessionResult" class="result" style="display: none"></div>
+        </div>
+      </div>
+
+      <!-- Session Persistence Test -->
+      <div class="test-section">
+        <h3>💾 Session Persistence Test</h3>
+        <p>Test session persistence across browser refresh:</p>
+        <button onclick="testPersistence()">Test Persistence</button>
+        <button onclick="window.location.reload()">Reload Page</button>
+        <div id="persistenceResult" class="result" style="display: none"></div>
+      </div>
+
+      <!-- Multi-Tab Sync Test -->
+      <div class="test-section">
+        <h3>🔄 Multi-Tab Sync Test</h3>
+        <p>Test session synchronization across multiple tabs:</p>
+        <button onclick="openNewTab()">Open New Tab</button>
+        <button onclick="testMultiTabSync()">Test Sync</button>
+        <div id="multiTabResult" class="result" style="display: none"></div>
+      </div>
+
+      <!-- Auto-Refresh Test -->
+      <div class="test-section">
+        <h3>⏰ Auto-Refresh Test</h3>
+        <p>Test automatic session refresh (simulated):</p>
+        <button onclick="testAutoRefresh()">Test Auto-Refresh</button>
+        <button onclick="simulateExpiry()">Simulate Token Expiry</button>
+        <div id="refreshResult" class="result" style="display: none"></div>
+      </div>
+
+      <!-- Event Log -->
+      <div class="test-section">
+        <h3>📋 Session Event Log</h3>
+        <button onclick="clearEventLog()">Clear Log</button>
+        <div id="eventLog" class="result info" style="display: block; max-height: 300px; overflow-y: auto"></div>
+      </div>
+    </div>
+
+    <script type="module">
+      import {UserManager} from "./dist/index.js";
+
+      let userManager;
+      const eventLog = document.getElementById("eventLog");
+      const statusDiv = document.getElementById("status");
+      const sessionInfoDiv = document.getElementById("sessionInfo");
+
+      // Initialize UserManager
+      async function initializeUserManager() {
+        try {
+          const config = {
+            supabase: {
+              url: import.meta.env.VITE_SUPABASE_URL,
+              anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            },
+            events: {
+              enableLogging: true,
+              maxListeners: 100,
+            },
+          };
+
+          userManager = UserManager.getInstance(config);
+
+          // Set up event listeners
+          setupEventListeners();
+
+          // Initialize
+          const result = await userManager.initialize();
+
+          if (result.success) {
+            statusDiv.innerHTML = "<strong>Status:</strong> ✅ UserManager initialized successfully!";
+            statusDiv.className = "status success";
+            logEvent("UserManager initialized successfully");
+            updateSessionInfo();
+          } else {
+            throw result.error;
+          }
+        } catch (error) {
+          statusDiv.innerHTML = `<strong>Status:</strong> ❌ Failed to initialize: ${error.message}`;
+          statusDiv.className = "status error";
+          logEvent(`Initialization failed: ${error.message}`, "error");
+        }
+      }
+
+      function setupEventListeners() {
+        // Session events
+        userManager.on("session:started", (data) => {
+          logEvent(`🚀 Session started for: ${data.session.user.email}`, "success");
+          updateSessionInfo();
+        });
+
+        userManager.on("session:ended", (data) => {
+          logEvent(`🛑 Session ended (reason: ${data.reason})`, "info");
+          updateSessionInfo();
+        });
+
+        userManager.on("session:refreshed", (data) => {
+          logEvent(`🔄 Session refreshed for: ${data.session.user.email}`, "success");
+          updateSessionInfo();
+        });
+
+        userManager.on("session:restored", (data) => {
+          logEvent(`💾 Session restored from storage: ${data.session.user.email}`, "success");
+          updateSessionInfo();
+        });
+
+        // Authentication events
+        userManager.on("auth:signedIn", (data) => {
+          logEvent(`🔑 User signed in: ${data.user.email}`, "success");
+          updateSessionInfo();
+        });
+
+        userManager.on("auth:signedOut", (data) => {
+          logEvent(`👋 User signed out: ${data.user?.email || "unknown"}`, "info");
+          updateSessionInfo();
+        });
+
+        // User state events
+        userManager.on("user:stateChanged", (data) => {
+          logEvent(`👤 User state changed - Authenticated: ${data.isAuthenticated}`, "info");
+        });
+
+        userManager.on("user:loading", (data) => {
+          logEvent(`⏳ Loading: ${data.isLoading}`, "info");
+        });
+
+        // Error events
+        userManager.on("error:general", (data) => {
+          logEvent(`❌ Error: ${data.message}`, "error");
+        });
+
+        // Multi-tab sync events (if available)
+        try {
+          userManager.getSessionManager().eventEmitter?.on?.("session:syncedFromTab", (data) => {
+            logEvent(`🔄 Session synced from another tab`, "info");
+            updateSessionInfo();
+          });
+        } catch (e) {
+          // Event emitter might not be directly accessible
+        }
+      }
+
+      function updateSessionInfo() {
+        try {
+          const userState = userManager.getUserState();
+          const sessionState = userManager.getSessionState();
+
+          if (userState.success && sessionState.success) {
+            const info = {
+              authenticated: userState.data.isAuthenticated,
+              user: userState.data.user?.email || "None",
+              hasSession: sessionState.data.hasSession,
+              isRefreshing: sessionState.data.isRefreshing,
+              autoRefreshEnabled: sessionState.data.autoRefreshEnabled,
+              lastRefresh: sessionState.data.lastRefresh ? new Date(sessionState.data.lastRefresh).toLocaleTimeString() : "Never",
+            };
+
+            sessionInfoDiv.innerHTML = `
+                        <strong>Session Info:</strong><br>
+                        Authenticated: ${info.authenticated ? "✅" : "❌"}<br>
+                        User: ${info.user}<br>
+                        Has Session: ${info.hasSession ? "✅" : "❌"}<br>
+                        Auto-Refresh: ${info.autoRefreshEnabled ? "✅" : "❌"}<br>
+                        Is Refreshing: ${info.isRefreshing ? "🔄" : "❌"}<br>
+                        Last Refresh: ${info.lastRefresh}
+                    `;
+            sessionInfoDiv.className = info.authenticated ? "session-info success" : "session-info warning";
+          }
+        } catch (error) {
+          sessionInfoDiv.innerHTML = `<strong>Session Info:</strong> Error getting session info`;
+          sessionInfoDiv.className = "session-info error";
+        }
+      }
+
+      function logEvent(message, type = "info") {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = `[${timestamp}] ${message}\n`;
+        eventLog.textContent += logEntry;
+        eventLog.scrollTop = eventLog.scrollHeight;
+      }
+
+      function showResult(elementId, result, isError = false) {
+        const element = document.getElementById(elementId);
+        element.style.display = "block";
+        element.className = `result ${isError ? "error" : "success"}`;
+        element.textContent = JSON.stringify(result, null, 2);
+      }
+
+      // Test functions
+      window.testSignIn = async function () {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        if (!email || !password) {
+          showResult("authResult", {error: "Email and password are required"}, true);
+          return;
+        }
+
+        try {
+          logEvent(`🔑 Attempting sign in for: ${email}`);
+          const result = await userManager.signIn({email, password});
+          showResult("authResult", result);
+          logEvent(`✅ Sign in result: ${result.success ? "Success" : "Failed"}`, result.success ? "success" : "error");
+          updateSessionInfo();
+        } catch (error) {
+          showResult("authResult", {error: error.message}, true);
+          logEvent(`❌ Sign in error: ${error.message}`, "error");
+        }
+      };
+
+      window.testSignOut = async function () {
+        try {
+          logEvent(`👋 Attempting sign out`);
+          const result = await userManager.signOut();
+          showResult("authResult", result);
+          logEvent(`✅ Sign out result: ${result.success ? "Success" : "Failed"}`, result.success ? "success" : "error");
+          updateSessionInfo();
+        } catch (error) {
+          showResult("authResult", {error: error.message}, true);
+          logEvent(`❌ Sign out error: ${error.message}`, "error");
+        }
+      };
+
+      window.getSessionState = function () {
+        try {
+          const result = userManager.getSessionState();
+          showResult("sessionResult", result);
+          logEvent(`📊 Session state retrieved`, "success");
+        } catch (error) {
+          showResult("sessionResult", {error: error.message}, true);
+          logEvent(`❌ Get session state error: ${error.message}`, "error");
+        }
+      };
+
+      window.getCurrentSession = function () {
+        try {
+          const session = userManager.getCurrentSession();
+          const result = session
+            ? {
+                user: session.user.email,
+                expires_at: session.expires_at ? new Date(session.expires_at * 1000).toLocaleString() : "Unknown",
+                token_type: session.token_type,
+              }
+            : null;
+          showResult("sessionResult", {session: result});
+          logEvent(`📊 Current session retrieved`, "success");
+        } catch (error) {
+          showResult("sessionResult", {error: error.message}, true);
+          logEvent(`❌ Get current session error: ${error.message}`, "error");
+        }
+      };
+
+      window.refreshSession = async function () {
+        try {
+          logEvent(`🔄 Attempting session refresh`);
+          const result = await userManager.refreshSession();
+          showResult("sessionResult", result);
+          logEvent(`✅ Session refresh result: ${result.success ? "Success" : "Failed"}`, result.success ? "success" : "error");
+          updateSessionInfo();
+        } catch (error) {
+          showResult("sessionResult", {error: error.message}, true);
+          logEvent(`❌ Session refresh error: ${error.message}`, "error");
+        }
+      };
+
+      window.testPersistence = function () {
+        const currentUser = userManager.getCurrentUser();
+        if (currentUser) {
+          localStorage.setItem("test_persistence_user", currentUser.email);
+          showResult("persistenceResult", {
+            message: "User stored for persistence test. Reload the page to test.",
+            user: currentUser.email,
+          });
+          logEvent(`💾 Persistence test prepared for: ${currentUser.email}`, "info");
+        } else {
+          showResult("persistenceResult", {error: "No user signed in to test persistence"}, true);
+          logEvent(`❌ No user for persistence test`, "error");
+        }
+      };
+
+      window.openNewTab = function () {
+        const newTab = window.open(window.location.href, "_blank");
+        showResult("multiTabResult", {message: "New tab opened. Sign in/out in either tab to test sync."});
+        logEvent(`🔄 New tab opened for multi-tab sync test`, "info");
+      };
+
+      window.testMultiTabSync = function () {
+        showResult("multiTabResult", {
+          message: "Multi-tab sync is automatic. Open another tab and sign in/out to see sync in action.",
+          instructions: ["1. Open a new tab with this page", "2. Sign in or out in either tab", "3. Watch the event log in both tabs", "4. Session state should sync automatically"],
+        });
+        logEvent(`🔄 Multi-tab sync test instructions displayed`, "info");
+      };
+
+      window.testAutoRefresh = async function () {
+        try {
+          logEvent(`⏰ Testing auto-refresh functionality`);
+          const sessionManager = userManager.getSessionManager();
+          const sessionState = sessionManager.getSessionState();
+
+          showResult("refreshResult", {
+            message: "Auto-refresh is enabled by default",
+            currentState: sessionState,
+            info: "Sessions will auto-refresh 5 minutes before expiry",
+          });
+          logEvent(`⏰ Auto-refresh test completed`, "success");
+        } catch (error) {
+          showResult("refreshResult", {error: error.message}, true);
+          logEvent(`❌ Auto-refresh test error: ${error.message}`, "error");
+        }
+      };
+
+      window.simulateExpiry = function () {
+        showResult("refreshResult", {
+          message: "Session expiry simulation",
+          note: "In a real scenario, the session would auto-refresh before expiry",
+          info: "Manual refresh can be triggered using the Refresh Session button",
+        });
+        logEvent(`⏰ Session expiry simulation displayed`, "info");
+      };
+
+      window.clearEventLog = function () {
+        eventLog.textContent = "";
+      };
+
+      // Check for persistence test on page load
+      window.addEventListener("load", () => {
+        const testUser = localStorage.getItem("test_persistence_user");
+        if (testUser) {
+          logEvent(`💾 Persistence test: Expected user ${testUser}`, "info");
+          localStorage.removeItem("test_persistence_user");
+
+          // Check if session was restored
+          setTimeout(() => {
+            const currentUser = userManager?.getCurrentUser();
+            if (currentUser && currentUser.email === testUser) {
+              logEvent(`✅ Persistence test PASSED: Session restored for ${testUser}`, "success");
+              showResult("persistenceResult", {
+                result: "PASSED",
+                message: `Session successfully restored for ${testUser}`,
+              });
+            } else {
+              logEvent(`❌ Persistence test FAILED: Session not restored`, "error");
+              showResult(
+                "persistenceResult",
+                {
+                  result: "FAILED",
+                  message: "Session was not restored after page reload",
+                },
+                true
+              );
+            }
+          }, 1000);
+        }
+      });
+
+      // Initialize on page load
+      initializeUserManager();
+
+      // Update session info every 10 seconds
+      setInterval(updateSessionInfo, 10000);
+    </script>
+  </body>
+</html>

@@ -7,6 +7,7 @@ import {createClient, type SupabaseClient} from "@supabase/supabase-js";
 import {ErrorHandler, UserManagerError, UserManagerErrorType, type OperationResult} from "../utils/ErrorHandler";
 import {Validators} from "../utils/Validators";
 import {EmailAuthService} from "../services/EmailAuthService";
+import {SessionManager, type SessionStorageConfig} from "../services/SessionManager";
 
 /**
  * Main UserManager class - Singleton pattern
@@ -18,6 +19,7 @@ export class UserManager {
   private eventEmitter: EventEmitter;
   private supabase: SupabaseClient;
   private emailAuthService: EmailAuthService;
+  private sessionManager: SessionManager;
   private isInitialized: boolean = false;
   private currentUser: SupabaseUser | null = null;
   private currentSession: UserSession | null = null;
@@ -57,6 +59,14 @@ export class UserManager {
       // Initialize EmailAuthService
       this.emailAuthService = new EmailAuthService(this.supabase, {
         enableLogging: config.events?.enableLogging || false,
+      });
+
+      // Initialize SessionManager
+      this.sessionManager = new SessionManager(this.supabase, this.eventEmitter, {
+        enableLogging: config.events?.enableLogging || false,
+        autoRefresh: true,
+        refreshThreshold: 5,
+        enableMultiTabSync: true,
       });
     } catch (error) {
       throw ErrorHandler.createError(UserManagerErrorType.INITIALIZATION_ERROR, "Failed to initialize Supabase client", {
@@ -109,12 +119,20 @@ export class UserManager {
 
     return await ErrorHandler.wrapOperation(
       async () => {
+        // Initialize SessionManager first
+        const sessionResult = await this.sessionManager.initialize();
+        if (sessionResult.success && sessionResult.data) {
+          this.currentSession = sessionResult.data;
+          this.currentUser = sessionResult.data.user;
+          this.emit("session:restored", {session: sessionResult.data});
+        }
+
         // Set up auth state change listener
         this.supabase.auth.onAuthStateChange((event, session) => {
           this.handleAuthStateChange(event, session);
         });
 
-        // Get initial session
+        // Get initial session from Supabase (this might be different from stored session)
         const {
           data: {session},
           error,
@@ -129,7 +147,9 @@ export class UserManager {
           throw userManagerError;
         }
 
-        if (session) {
+        // If we have a fresh session from Supabase, update SessionManager
+        if (session && (!this.currentSession || session.access_token !== this.currentSession.access_token)) {
+          await this.sessionManager.setSession(session);
           this.currentSession = session;
           this.currentUser = session.user;
           this.emit("session:started", {session});
@@ -160,14 +180,20 @@ export class UserManager {
 
     switch (event) {
       case "SIGNED_IN":
-        this.currentSession = session;
-        this.currentUser = session.user;
-        this.emit("auth:signedIn", {user: session.user, session});
-        this.emit("session:started", {session});
+        // Update SessionManager and internal state
+        if (session) {
+          this.sessionManager.setSession(session);
+          this.currentSession = session;
+          this.currentUser = session.user;
+          this.emit("auth:signedIn", {user: session.user, session});
+          this.emit("session:started", {session});
+        }
         break;
 
       case "SIGNED_OUT":
         const previousUser = this.currentUser;
+        // Clear SessionManager and internal state
+        this.sessionManager.clearSession();
         this.currentSession = null;
         this.currentUser = null;
         this.currentStatus = null;
@@ -176,19 +202,26 @@ export class UserManager {
         break;
 
       case "TOKEN_REFRESHED":
-        this.currentSession = session;
-        this.emit("auth:sessionRefreshed", {session});
-        this.emit("session:refreshed", {session});
+        if (session) {
+          this.sessionManager.setSession(session);
+          this.currentSession = session;
+          this.emit("auth:sessionRefreshed", {session});
+          this.emit("session:refreshed", {session});
+        }
         break;
 
       case "USER_UPDATED":
-        this.currentUser = session.user;
-        this.emit("user:stateChanged", {
-          user: this.currentUser,
-          session: this.currentSession,
-          status: this.currentStatus,
-          isAuthenticated: !!this.currentUser,
-        });
+        if (session) {
+          this.sessionManager.setSession(session);
+          this.currentSession = session;
+          this.currentUser = session.user;
+          this.emit("user:stateChanged", {
+            user: this.currentUser,
+            session: this.currentSession,
+            status: this.currentStatus,
+            isAuthenticated: !!this.currentUser,
+          });
+        }
         break;
     }
 
@@ -215,8 +248,9 @@ export class UserManager {
         const result = await this.emailAuthService.signUp(credentials);
 
         if (result.success && result.data) {
-          // Update internal state
+          // Update internal state and SessionManager
           if (result.data.session) {
+            await this.sessionManager.setSession(result.data.session);
             this.currentSession = result.data.session;
             this.currentUser = result.data.user;
             this.emit("auth:signedIn", {user: result.data.user, session: result.data.session});
@@ -250,7 +284,8 @@ export class UserManager {
         const result = await this.emailAuthService.signIn(credentials);
 
         if (result.success && result.data) {
-          // Update internal state
+          // Update internal state and SessionManager
+          await this.sessionManager.setSession(result.data.session);
           this.currentSession = result.data.session;
           this.currentUser = result.data.user;
 
@@ -282,7 +317,8 @@ export class UserManager {
         const result = await this.emailAuthService.signOut();
 
         if (result.success) {
-          // Clear internal state
+          // Clear SessionManager and internal state
+          await this.sessionManager.clearSession();
           this.currentSession = null;
           this.currentUser = null;
           this.currentStatus = null;
@@ -382,6 +418,8 @@ export class UserManager {
         const result = await this.emailAuthService.refreshSession();
 
         if (result.success && result.data) {
+          // Update SessionManager and internal state
+          await this.sessionManager.setSession(result.data.session);
           this.currentSession = result.data.session;
           this.currentUser = result.data.user;
 
@@ -585,6 +623,31 @@ export class UserManager {
    */
   getValidators(): typeof Validators {
     return Validators;
+  }
+
+  /**
+   * Get session manager instance for advanced session operations
+   */
+  getSessionManager(): SessionManager {
+    return this.sessionManager;
+  }
+
+  /**
+   * Get current session state information
+   */
+  getSessionState(): OperationResult<{
+    hasSession: boolean;
+    isRefreshing: boolean;
+    lastRefresh: number;
+    autoRefreshEnabled: boolean;
+  }> {
+    try {
+      const sessionState = this.sessionManager.getSessionState();
+      return {success: true, data: sessionState};
+    } catch (error) {
+      const userManagerError = ErrorHandler.createError(UserManagerErrorType.SESSION_ERROR, "Failed to get session state", {originalError: error as Error});
+      return {success: false, error: userManagerError};
+    }
   }
 
   /**
