@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Manager Test App - Dashboard</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f8f9fa;
+        min-height: 100vh;
+      }
+
+      .header {
+        background: white;
+        padding: 1rem 2rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .header h1 {
+        color: #333;
+      }
+
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+      }
+
+      .status-basic {
+        background: #e9ecef;
+        color: #495057;
+      }
+      .status-silver {
+        background: #f8f9fa;
+        color: #6c757d;
+        border: 1px solid #dee2e6;
+      }
+      .status-gold {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .status-platinum {
+        background: #e7e3ff;
+        color: #5a4fcf;
+      }
+
+      .logout-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.875rem;
+      }
+
+      .logout-btn:hover {
+        background: #c82333;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 2rem;
+      }
+
+      .card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+      }
+
+      .card h2 {
+        margin-bottom: 1rem;
+        color: #333;
+      }
+
+      .user-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+      }
+
+      .detail-item {
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+
+      .detail-label {
+        font-weight: 500;
+        color: #666;
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .detail-value {
+        color: #333;
+        font-size: 1rem;
+      }
+
+      .actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 500;
+        transition: all 0.2s;
+      }
+
+      .btn-primary {
+        background: #667eea;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #5a6fd8;
+      }
+
+      .btn-secondary {
+        background: #6c757d;
+        color: white;
+      }
+
+      .btn-secondary:hover {
+        background: #5a6268;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 2rem;
+        color: #666;
+      }
+
+      .error {
+        color: #dc3545;
+        background: #f8d7da;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+      }
+
+      .success {
+        color: #155724;
+        background: #d4edda;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>🏠 Dashboard</h1>
+      <div class="user-info">
+        <span id="userEmail">Loading...</span>
+        <span id="userStatus" class="status-badge status-basic">Basic</span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="container">
+      <div id="loading" class="loading" style="display: none">
+        <p>Loading user data...</p>
+      </div>
+
+      <div id="error" class="error" style="display: none"></div>
+      <div id="success" class="success" style="display: none"></div>
+
+      <div class="card">
+        <h2>👤 User Information</h2>
+        <div class="user-details">
+          <div class="detail-item">
+            <div class="detail-label">Email</div>
+            <div class="detail-value" id="detailEmail">-</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Status</div>
+            <div class="detail-value" id="detailStatus">-</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Points</div>
+            <div class="detail-value" id="detailPoints">-</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Member Since</div>
+            <div class="detail-value" id="detailMemberSince">-</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Last Sign In</div>
+            <div class="detail-value" id="detailLastSignIn">-</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Email Verified</div>
+            <div class="detail-value" id="detailEmailVerified">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>⚙️ Account Actions</h2>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="updatePassword()">Change Password</button>
+          <button class="btn btn-secondary" onclick="refreshSession()">Refresh Session</button>
+          <button class="btn btn-secondary" onclick="testEvents()">Test Events</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📊 Status Progress</h2>
+        <div id="statusProgress">
+          <p>Status progression will be displayed here...</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🔧 Debug Information</h2>
+        <div id="debugInfo" style="font-family: monospace; font-size: 0.875rem; background: #f8f9fa; padding: 1rem; border-radius: 6px">
+          <p>Debug information will appear here...</p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Check if user is authenticated on page load
+      window.addEventListener("load", () => {
+        checkAuthentication();
+        loadUserData();
+      });
+
+      function checkAuthentication() {
+        // Placeholder - will be replaced with UserManager integration
+        console.log("Checking authentication status...");
+      }
+
+      function loadUserData() {
+        // Placeholder - will be replaced with UserManager integration
+        console.log("Loading user data...");
+
+        // Mock data for testing
+        setTimeout(() => {
+          document.getElementById("userEmail").textContent = "test@example.com";
+          document.getElementById("detailEmail").textContent = "test@example.com";
+          document.getElementById("detailStatus").textContent = "Basic";
+          document.getElementById("detailPoints").textContent = "0";
+          document.getElementById("detailMemberSince").textContent = new Date().toLocaleDateString();
+          document.getElementById("detailLastSignIn").textContent = new Date().toLocaleString();
+          document.getElementById("detailEmailVerified").textContent = "Yes";
+
+          updateDebugInfo("Mock user data loaded");
+        }, 500);
+      }
+
+      function logout() {
+        if (confirm("Are you sure you want to logout?")) {
+          // Placeholder - will be replaced with UserManager integration
+          console.log("Logging out...");
+          updateDebugInfo("Logout initiated");
+
+          // Redirect to login page
+          setTimeout(() => {
+            window.location.href = "index.html";
+          }, 1000);
+        }
+      }
+
+      function updatePassword() {
+        const newPassword = prompt("Enter new password:");
+        if (newPassword && newPassword.length >= 6) {
+          // Placeholder - will be replaced with UserManager integration
+          console.log("Updating password...");
+          updateDebugInfo("Password update initiated");
+          showSuccess("Password update functionality will be implemented with UserManager");
+        } else if (newPassword) {
+          showError("Password must be at least 6 characters long");
+        }
+      }
+
+      function refreshSession() {
+        // Placeholder - will be replaced with UserManager integration
+        console.log("Refreshing session...");
+        updateDebugInfo("Session refresh initiated");
+        showSuccess("Session refresh functionality will be implemented with UserManager");
+      }
+
+      function testEvents() {
+        // Placeholder - will be replaced with UserManager integration
+        console.log("Testing events...");
+        updateDebugInfo("Event system test initiated");
+        showSuccess("Event system testing will be implemented with UserManager");
+      }
+
+      function showError(message) {
+        const errorDiv = document.getElementById("error");
+        errorDiv.textContent = message;
+        errorDiv.style.display = "block";
+        setTimeout(() => {
+          errorDiv.style.display = "none";
+        }, 5000);
+      }
+
+      function showSuccess(message) {
+        const successDiv = document.getElementById("success");
+        successDiv.textContent = message;
+        successDiv.style.display = "block";
+        setTimeout(() => {
+          successDiv.style.display = "none";
+        }, 5000);
+      }
+
+      function updateDebugInfo(message) {
+        const debugDiv = document.getElementById("debugInfo");
+        const timestamp = new Date().toLocaleTimeString();
+        debugDiv.innerHTML += `<br>[${timestamp}] ${message}`;
+        debugDiv.scrollTop = debugDiv.scrollHeight;
+      }
+
+      // Initialize debug info
+      updateDebugInfo("Dashboard loaded - ready for UserManager integration");
+    </script>
+  </body>
+</html>

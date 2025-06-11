@@ -3,6 +3,10 @@ import dts from "vite-plugin-dts";
 import {resolve} from "path";
 
 export default defineConfig({
+  // Development server configuration
+  root: "test-app",
+  publicDir: "../public",
+
   plugins: [
     dts({
       insertTypesEntry: true,

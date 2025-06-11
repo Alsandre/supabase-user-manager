@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Manager Test App - Email Verification</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .container {
+        background: white;
+        padding: 3rem;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 500px;
+        text-align: center;
+      }
+
+      .icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+      }
+
+      .success-icon {
+        color: #28a745;
+      }
+
+      .error-icon {
+        color: #dc3545;
+      }
+
+      .loading-icon {
+        color: #667eea;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      h1 {
+        margin-bottom: 1rem;
+        color: #333;
+      }
+
+      .message {
+        margin-bottom: 2rem;
+        color: #666;
+        line-height: 1.6;
+      }
+
+      .btn {
+        padding: 0.75rem 2rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-block;
+        margin: 0.5rem;
+      }
+
+      .btn-primary {
+        background: #667eea;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #5a6fd8;
+      }
+
+      .btn-secondary {
+        background: #6c757d;
+        color: white;
+      }
+
+      .btn-secondary:hover {
+        background: #5a6268;
+      }
+
+      .debug-info {
+        margin-top: 2rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 6px;
+        font-family: monospace;
+        font-size: 0.875rem;
+        text-align: left;
+        color: #666;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Loading State -->
+      <div id="loadingState">
+        <div class="icon loading-icon">⏳</div>
+        <h1>Verifying Email...</h1>
+        <p class="message">Please wait while we verify your email address.</p>
+      </div>
+
+      <!-- Success State -->
+      <div id="successState" class="hidden">
+        <div class="icon success-icon">✅</div>
+        <h1>Email Verified!</h1>
+        <p class="message">Your email has been successfully verified. You can now access all features of your account.</p>
+        <a href="dashboard.html" class="btn btn-primary">Go to Dashboard</a>
+        <a href="index.html" class="btn btn-secondary">Back to Login</a>
+      </div>
+
+      <!-- Error State -->
+      <div id="errorState" class="hidden">
+        <div class="icon error-icon">❌</div>
+        <h1>Verification Failed</h1>
+        <p class="message" id="errorMessage">We couldn't verify your email address. The link may be expired or invalid.</p>
+        <button class="btn btn-primary" onclick="resendVerification()">Resend Verification Email</button>
+        <a href="index.html" class="btn btn-secondary">Back to Login</a>
+      </div>
+
+      <!-- Already Verified State -->
+      <div id="alreadyVerifiedState" class="hidden">
+        <div class="icon success-icon">✅</div>
+        <h1>Already Verified</h1>
+        <p class="message">Your email address has already been verified. You can proceed to your dashboard.</p>
+        <a href="dashboard.html" class="btn btn-primary">Go to Dashboard</a>
+        <a href="index.html" class="btn btn-secondary">Back to Login</a>
+      </div>
+
+      <!-- Debug Information -->
+      <div class="debug-info">
+        <strong>Debug Information:</strong>
+        <div id="debugInfo">
+          <div>Page loaded at: <span id="loadTime"></span></div>
+          <div>URL Parameters: <span id="urlParams"></span></div>
+          <div>Verification Status: <span id="verificationStatus">Checking...</span></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Initialize page
+      window.addEventListener("load", () => {
+        initializePage();
+        processVerification();
+      });
+
+      function initializePage() {
+        // Update debug info
+        document.getElementById("loadTime").textContent = new Date().toLocaleString();
+
+        // Parse URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const paramsObj = {};
+        for (const [key, value] of urlParams.entries()) {
+          paramsObj[key] = value;
+        }
+        document.getElementById("urlParams").textContent = JSON.stringify(paramsObj, null, 2);
+
+        console.log("Email verification page loaded");
+        console.log("URL Parameters:", paramsObj);
+      }
+
+      function processVerification() {
+        // Get verification parameters from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get("token");
+        const type = urlParams.get("type");
+        const email = urlParams.get("email");
+
+        updateVerificationStatus("Processing verification...");
+
+        // Simulate verification process
+        setTimeout(() => {
+          if (token && type === "signup") {
+            // Simulate successful verification
+            if (token.length > 10) {
+              showSuccessState();
+              updateVerificationStatus("Email verified successfully");
+            } else {
+              showErrorState("Invalid verification token");
+              updateVerificationStatus("Verification failed - invalid token");
+            }
+          } else if (token && type === "recovery") {
+            // Handle password recovery
+            showPasswordRecoveryState();
+            updateVerificationStatus("Password recovery link processed");
+          } else if (!token) {
+            showErrorState("No verification token found in URL");
+            updateVerificationStatus("No token provided");
+          } else {
+            showErrorState("Unknown verification type");
+            updateVerificationStatus("Unknown verification type: " + type);
+          }
+        }, 2000); // Simulate network delay
+      }
+
+      function showSuccessState() {
+        hideAllStates();
+        document.getElementById("successState").classList.remove("hidden");
+      }
+
+      function showErrorState(message) {
+        hideAllStates();
+        document.getElementById("errorState").classList.remove("hidden");
+        if (message) {
+          document.getElementById("errorMessage").textContent = message;
+        }
+      }
+
+      function showAlreadyVerifiedState() {
+        hideAllStates();
+        document.getElementById("alreadyVerifiedState").classList.remove("hidden");
+      }
+
+      function showPasswordRecoveryState() {
+        hideAllStates();
+        // For now, redirect to login with a message
+        alert("Password recovery functionality will be implemented with UserManager integration");
+        window.location.href = "index.html";
+      }
+
+      function hideAllStates() {
+        document.getElementById("loadingState").classList.add("hidden");
+        document.getElementById("successState").classList.add("hidden");
+        document.getElementById("errorState").classList.add("hidden");
+        document.getElementById("alreadyVerifiedState").classList.add("hidden");
+      }
+
+      function resendVerification() {
+        // Placeholder - will be replaced with UserManager integration
+        console.log("Resending verification email...");
+        updateVerificationStatus("Resend verification requested");
+
+        // Simulate resend process
+        const btn = event.target;
+        btn.disabled = true;
+        btn.textContent = "Sending...";
+
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = "Resend Verification Email";
+          alert("Verification email resent! (This will be implemented with UserManager)");
+          updateVerificationStatus("Verification email resent (simulated)");
+        }, 2000);
+      }
+
+      function updateVerificationStatus(status) {
+        document.getElementById("verificationStatus").textContent = status;
+        console.log("Verification Status:", status);
+      }
+
+      // Handle browser back/forward navigation
+      window.addEventListener("popstate", () => {
+        processVerification();
+      });
+
+      console.log("Email verification page ready for UserManager integration");
+    </script>
+  </body>
+</html>
