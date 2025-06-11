@@ -248,6 +248,16 @@
       </div>
     </div>
 
+    <script type="module">
+      // Import navigation
+      import {initializeNavigation} from "./navigation.js";
+
+      // Initialize navigation on page load
+      window.addEventListener("load", () => {
+        initializeNavigation("dashboard.html");
+      });
+    </script>
+
     <script>
       // Check if user is authenticated on page load
       window.addEventListener("load", () => {

@@ -190,11 +190,16 @@
     </div>
 
     <script type="module">
-      // Import configuration
+      // Import configuration and navigation
       import config from "./config.js";
+      import {initializeNavigation} from "./navigation.js";
 
-      // Validate configuration on page load
+      // Initialize navigation and validate configuration on page load
       window.addEventListener("load", () => {
+        // Initialize navigation
+        initializeNavigation("index.html");
+
+        // Validate configuration
         const isValid = config.validate();
         if (!isValid) {
           document.getElementById("error").textContent = "Configuration error: Please check your .env file";

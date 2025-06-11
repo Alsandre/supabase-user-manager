@@ -162,6 +162,16 @@
       </div>
     </div>
 
+    <script type="module">
+      // Import navigation
+      import {initializeNavigation} from "./navigation.js";
+
+      // Initialize navigation on page load
+      window.addEventListener("load", () => {
+        initializeNavigation("verify.html");
+      });
+    </script>
+
     <script>
       // Initialize page
       window.addEventListener("load", () => {
